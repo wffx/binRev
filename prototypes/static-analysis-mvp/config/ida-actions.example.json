@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "transaction": "confirm-el2-entry",
+  "actor": "prototype-human-reviewed-rule-engine",
+  "actions": [
+    {
+      "action": "create_function",
+      "address": "0x80000000"
+    },
+    {
+      "action": "rename",
+      "address": "0x80000000",
+      "name": "hyp_entry"
+    },
+    {
+      "action": "function_comment",
+      "address": "0x80000000",
+      "comment": "[confirmed] Image entry; verify EL and stack initialization."
+    }
+  ]
+}
