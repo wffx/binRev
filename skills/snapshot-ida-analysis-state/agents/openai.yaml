@@ -1,0 +1,4 @@
+interface:
+  display_name: "Snapshot IDA Analysis State"
+  short_description: "Snapshot accepted IDA state and metadata"
+  default_prompt: "Use $snapshot-ida-analysis-state to export an accepted IDA checkpoint and normalized analysis snapshot."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Integrate EL2 Architecture"
+  short_description: "Integrate S04 boot, exception, context, and event models"
+  default_prompt: "Integrate the S04 ARM64 EL2 architecture model for the current Image case."

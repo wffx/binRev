@@ -1,0 +1,4 @@
+interface:
+  display_name: "Resolve ARM64 Load Address"
+  short_description: "Score ARM64 load base and entry candidates"
+  default_prompt: "Use $resolve-arm64-load-address to evaluate base, entry, and segment candidates from IDA evidence."

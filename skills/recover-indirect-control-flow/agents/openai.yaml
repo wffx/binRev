@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recover Indirect Control Flow"
+  short_description: "Recover indirect calls and jump target candidates"
+  default_prompt: "Use $recover-indirect-control-flow to recover jump tables, function pointer candidates, and unresolved indirect targets."

@@ -301,9 +301,12 @@ prepare-ida-image-database
 | `S03/program-model.json` | 统一程序结构模型 |
 | `S03/functions.jsonl` | 函数边界、置信度、调用关系 |
 | `S03/data-objects.jsonl` | 表、数组、字符串、状态对象候选 |
+| `S03/data-islands.jsonl` | 仅限 header/tail/明确非 text 区的外部数据、alignment/padding、嵌入 blob；主 `.text` 中间不得默认保留 literal pool/qword |
+| `S03/code-data-boundary-audit.json` | 全量 code/data/bit 未识别区域审计、text code-first 审计和剩余阻塞项 |
 | `S03/call-graph.json` | 直接调用图 |
 | `S03/indirect-targets.jsonl` | 间接调用/跳转候选 |
-| `S03/unresolved-regions.jsonl` | 未解析代码/数据区域 |
+| `S03/unresolved-regions.jsonl` | 未解析代码/数据区域，包括 `.text` 中不可解码的 `instruction_fallback` |
+| `S03/branch-sample.json` | 至少一个代表性函数分支样本，包含 root、范围、节点、直接边、间接边和选择理由 |
 | `S03/ida-stage.i64` | Stage 接受时的 IDA checkpoint |
 | `S03/records/<producer>.*.jsonl` | 四个 Producer 的 Evidence、Decision、Unknown 分片 |
 
@@ -314,6 +317,7 @@ prepare-ida-image-database
 S02 accepted IDA ----+                                  |
                      +-> recover-binary-data-objects ---+-> recover-indirect-control-flow
                                                         -> integrate-program-structure
+                                                        -> branch-sample validation
                                                         -> review-stage-output
                                                         -> human structure gate
                                                         -> apply-reviewed-ida-changes
@@ -323,22 +327,32 @@ S02 accepted IDA ----+                                  |
 ```
 
 - Function 与 data-object Worker 可并行，均从同一 accepted S02 snapshot 开始。
-- Indirect-control-flow Skill 等待二者候选输出。
+- `recover-binary-data-objects` 必须执行全量 code/data boundary 扫描，覆盖 IDA 中所有 code-bearing segment 内的未识别 bit/data、literal pool、pointer table、constant table、alignment/padding 和嵌入数据岛。
+- 对主 `.text` body 执行 code-first 策略：除 binary header/tail appendix 或明确非 text 区外，中间区域不得以 `DCQ`/`DCD`/`qword` data island 作为最终状态。可解码 4-byte word 必须恢复为 ARM64 code；不可解码 word 必须成为 `.inst`/`instruction_fallback` blocker，或经过显式人工审核后作为 accepted-risk。
+- Indirect-control-flow Skill 等待函数边界与 data-island/data-object 候选输出。
 - Integration Skill 解决 code/data 冲突并产生唯一 program model。
+- S03 必须至少选择一个代表性函数分支样本，而不是只验证孤立函数命名。
+- S03 必须通过 `code-data-boundary-audit`；所有 IDA 可见 bit/data 无法识别问题必须修复为已分类 data/code/padding/blob，或使 S03 停在 `rework/blocked`，不得带入 S04。
+- S03 的 `code-data-boundary-audit` 必须报告 `.text` 中 qword/data item 数量、已恢复 code word 数量和 `.inst fallback` 数量。只要存在未审核 `.inst fallback` 或中间 `.text` data island，S03 不得 accepted。
+- 对用户报告或抽样的 data-island 地址，S03 必须做 point-level readback：若地址是 data item tail，产物必须记录 owning `item_head/item_end`、分类和 head 上的可读注释/名称。`is_unknown=false` 不能单独作为“已修复”的验收依据。
+- 若调测阶段存在符号 oracle 或 symbolized IDB，比对报告必须放在 `validation/oracle/` 或 validation/forward-test 区域，并且所有映射标记为 `validation_only`；oracle 名称不得进入 S03 正式 functions/data/call graph 证据。
 - IDA 变更只在集成模型通过 Review 后提交。
 
 ### 退出条件
 
-- **accepted**：可达直接代码形成调用图；冲突已消解或进入 unresolved；间接目标有候选集或 Unknown。
-- **rework**：函数重叠、数据被误识别为代码、jump table 破坏 CFG，或 accepted address-space 被新证据否定。
-- **blocked**：entry/主要可达代码无法建立稳定边界，导致 S04 无法选择架构根函数。
+- **accepted**：可达直接代码形成调用图；函数边界和 code/data 边界冲突已消解；主 `.text` body 已按 code-first 策略恢复为 ARM64 code 或经审核的 `.inst` fallback；所有 IDA 可见 bit/data/data-island 未识别问题已结构化分类并形成已审核/已应用的 IDA proposal；用户报告/抽样 data-island 点具备 head/tail readback 解释；间接目标有候选集或 Unknown；至少一个代表性函数分支通过边界质量审计。
+- **rework**：函数重叠、数据被误识别为代码、代码被误识别为数据、literal pool/pointer table/constant table/alignment 未分类、jump table 破坏 CFG、代表性函数分支出现 false function start / boundary miss / merged functions，或 accepted address-space 被新证据否定。
+- **blocked**：entry/主要可达代码无法建立稳定边界，或存在当前约束下无法分类的 bit/data/code-data 区域，导致 S04 无法获得干净程序结构输入。
 
 ### 边界
 
 - 只恢复程序结构，不赋予 CPU/VM/调度/HKIP 等业务语义。
 - 不允许“所有 branch target 即函数”或用反编译美观度决定边界。
 - 间接调用不能被忽略；无法解析时必须进入 Unknown Registry。
+- S03 的 Unknown 不能用来绕过 bit/data 修复门禁；会污染 S04/S05 的 code/data boundary unknown 必须阻塞或 rework。
 - Worker 不能直接修改共享 IDA baseline。
+- IDA 写回成功不是 S03 接受条件；必须有分支级结构质量证据。
+- forward-test oracle 是调测验证材料，不得污染真实目标的 functions/data/call graph 证据，也不得成为生产 workflow 的必需输入。
 
 ## S04：ARM64 EL2 架构语义
 
@@ -349,12 +363,16 @@ S02 accepted IDA ----+                                  |
 ### 输入
 
 - `S02/address-space.json`
+- `S03/stage-manifest.json`
 - `S03/program-model.json`
 - `S03/functions.jsonl`
 - `S03/data-objects.jsonl`
+- `S03/data-islands.jsonl`
+- `S03/code-data-boundary-audit.json`
 - `S03/call-graph.json`
 - `S03/indirect-targets.jsonl`
 - `S03/unresolved-regions.jsonl`
+- `S03/unresolved-regions*.jsonl`
 - `S03/ida-stage.i64`
 - `S03/evidence-index.json`
 - `S03/decision-index.json`
@@ -392,17 +410,20 @@ S03 program model
 - Context layout 必须等待 boot/exception 的 save/restore 根路径。
 - 新增 `integrate-el2-architecture-model` 作为唯一 architecture model Owner。
 - 集成后才允许写入 IDA 架构名称、类型和注释。
+- S04 入口必须先读取 `S03/stage-manifest.json` 与所有 `S03/unresolved-regions*.jsonl`；若 S03 不是 `accepted`，或仍存在 `blocking: true` 的 code/data/blob unresolved，S04 只能作为 `forward_test_deferred_by_s03_rework` 运行。
+- forward-test S04 可以产生证据和 proposal 用于调测 workflow，但不得生成 accepted `S04/ida-stage.i64`，不得将 `s05_readiness` 标为 ready。
 
 ### 退出条件
 
 - **accepted**：启动和异常主路径可追踪或明确未知；关键 sysreg/event 已索引；context 保持 offset-first。
 - **rework**：vector 误识别、save/restore 不对称、系统寄存器解码错误，或 S03 函数边界被否定。
-- **blocked**：无法定位任何 EL2/exception/guest-transition 根路径，致使业务模型没有架构锚点。
+- **blocked**：无法定位任何 EL2/exception/guest-transition 根路径，致使业务模型没有架构锚点；或 S03 仍存在阻塞性 code/data/blob unresolved，导致 S04 无法获得干净程序结构输入。
 
 ### 边界
 
 - 只输出 ARM64/EL2 架构语义，不确认 VM config、scheduler、interrupt route 或 HKIP 业务归属。
 - 系统寄存器访问只能确认架构动作，不能单独确认高级函数名。
+- 不得把 S03 blocking unresolved blob 内的代码片段升级为 S04 architecture root；只能记录为 S03 rework 依赖。
 - Context 字段先使用 offset 名；不得依据常见开源结构直接套型。
 - 通用 ARM 规范知识可用，目标特定签名和源码不可用。
 
@@ -414,10 +435,13 @@ S03 program model
 
 ### 输入
 
+- `S03/stage-manifest.json`
 - `S03/program-model.json`
 - `S03/functions.jsonl`
 - `S03/data-objects.jsonl`
 - `S03/indirect-targets.jsonl`
+- `S03/unresolved-regions*.jsonl`
+- `S04/stage-manifest.json`
 - `S04/architecture-model.json`
 - `S04/context-layouts.jsonl`
 - `S04/sysreg-accesses.jsonl`
@@ -456,12 +480,18 @@ S03 program + S04 architecture
 - 两个 Worker 不读取彼此草稿，避免循环推断。
 - Integration Skill 负责统一 VM、vCPU、CPU、VMID、page ownership 引用。
 - 安全关键类型与 ownership 需要人工门禁。
+- S05 入口必须确认 S03 与 S04 均为 `accepted`；若 S04 为 `forward_test_deferred_by_s03_rework` 或 `s05_readiness.status != ready`，S05 只能输出 `blocked_by_upstream`，不得产生 S06 可消费模型。
+- S05 不得使用 S03 blocking unresolved blob 内的片段确认 CPU/vCPU、VMID、Stage-2 root 或 page ownership。
+- S05 必须区分 teardown candidate discovery 与 owner closure。teardown/rollback/free/remove/unmap-like 函数只能作为候选；只有 setup/activate 与 teardown 路径能通过 exact root signature 或 caller argument propagation 指向同一 owner 对象时，才允许考虑生成 S06 可消费 ownership。
+- 若只有相同 offset、相同 lifecycle field family、zero-store、barrier、TLBI 或 rollback 字符串，而没有共同 root，则状态必须保持 `review_required_owner_root_match`，并将 S06 gate 设为 `blocked_until_s05_owner_root_closure`。
+- 若 caller argument propagation 出现共同 root，但 root 属于全局常量、地址字面量、栈重载、同一 helper callsite 或 service-local switch helper，状态必须保持 `review_required_caller_argument_propagation`；只有 object-like root 继续通过 VMID/resource identity 与 lifecycle-boundary 检查后，才能进入 S06-ready ownership。
+- S05 integration 必须输出 root-class 统计；当 `object_like_count == 0` 时，S06 gate 固定为 `blocked_until_s05_object_like_owner_root`，不得由 exact caller match 数量、score 或同 caller 关系覆盖。
 
 ### 退出条件
 
-- **accepted**：CPU/vCPU 和 Stage-2 模型均存在；交叉引用一致；无法确定关系已登记 Unknown。
+- **accepted**：CPU/vCPU 和 Stage-2 模型均存在；交叉引用一致；setup/activate/teardown 的 owner-root 闭合已证明或不影响下游消费；无法确定关系已登记 Unknown。
 - **rework**：context owner、VMID、页所有权或 descriptor 解释冲突；新证据否定 S04 context。
-- **blocked**：无法识别 vCPU/context 或 Stage-2 根对象，导致 S06 无法关联服务对象。
+- **blocked**：无法识别 vCPU/context 或 Stage-2 根对象，导致 S06 无法关联服务对象；setup/teardown 只有 weak owner-root match、service-local caller argument match，或 root classification 中无 object-like root，导致资源生命周期无法闭合；或上游 S03/S04 未 accepted，导致 runtime ownership 无法安全建立。
 
 ### 边界
 
@@ -814,3 +844,39 @@ accepted S00-S09 artifact set
 - 最终交付接受
 
 Reviewer Skill 负责生成审查建议；最终门禁可以由用户或被授权的独立 Review Agent 接受。
+## S03 forward-test oracle addendum
+
+This addendum is part of the S03 workflow contract and applies only to lab validation runs where a paired symbolized IDB is explicitly provided by the user.
+
+### Scope
+
+- A symbolized oracle such as `tests/xen-syms_arm64.i64` is a validation-only artifact.
+- It may be used to tune S03 function-boundary and `.inst fallback` recovery in the test case.
+- It is not a production input and must not appear as evidence in recovered production `functions.jsonl`, `data-objects.jsonl`, `call-graph.json`, or final source-map claims.
+
+### Ordered workflow
+
+1. Build an oracle relation from byte/function fingerprints, dominant address delta, size, and branch-local CFG shape.
+2. Use target-only IDA evidence to make the primary S03 proposal.
+3. Compare the target proposal against the oracle and write the report under `validation/oracle/`.
+4. If the user explicitly authorizes oracle-assisted lab repair, convert only target words that map to oracle code and record the action as `validation_only`.
+5. Re-export target word state after every apply pass.
+6. Repeat apply/readback until oracle-code candidates reach zero, or record the remaining candidates as S03 residual blockers.
+
+### Exit rule
+
+S03 remains `rework_required` if any non-waived target middle `.text` word is still:
+
+- mapped to oracle code but not represented as target code,
+- represented only by stale `.inst fallback` comments,
+- hidden by IDA item-head/tail ambiguity,
+- or blocked by function-boundary/segment-coverage mismatch.
+
+Only after those residuals are fixed, waived with explicit reviewed rationale, or proven to be outside target `.text` may S03 proceed to S04.
+
+When residuals are waived, S03 may be marked `accepted` only if:
+
+- each waived address is represented in `accepted-risk-*.jsonl`,
+- `stage-manifest.json` records `residual_policy.status = accepted-risk`,
+- downstream stages include the accepted-risk artifact in their input provenance,
+- and any downstream conclusion directly depending on a waived address is downgraded to `inferred` or `unresolved`.

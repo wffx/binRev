@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apply Reviewed IDA Changes"
+  short_description: "Apply reviewed IDA transactions safely"
+  default_prompt: "Use $apply-reviewed-ida-changes to apply approved IDA proposals and record transactions."

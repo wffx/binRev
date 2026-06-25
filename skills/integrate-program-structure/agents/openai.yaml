@@ -1,0 +1,4 @@
+interface:
+  display_name: "Integrate Program Structure"
+  short_description: "Integrate functions, data, and control flow"
+  default_prompt: "Use $integrate-program-structure to merge S03 worker outputs into a single program model and IDA change proposal."

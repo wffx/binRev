@@ -337,9 +337,9 @@ S08 -> S09(parallel audits -> integrate) -> S10
 | `resolve-arm64-load-address` | `S02/address-space.json` |
 | `snapshot-ida-analysis-state` | 所有 Stage 的 `.i64` 与 normalized snapshot |
 | `recover-ida-functions` | `S03/functions.jsonl` |
-| `recover-binary-data-objects` | `S03/data-objects.jsonl`、`S03/unresolved-regions.jsonl` |
+| `recover-binary-data-objects` | `S03/data-objects.jsonl`、`S03/data-islands.jsonl`、`S03/code-data-boundary-audit.json`、`S03/unresolved-regions.jsonl` |
 | `recover-indirect-control-flow` | `S03/indirect-targets.jsonl` |
-| `integrate-program-structure` | `S03/program-model.json`、`S03/call-graph.json` |
+| `integrate-program-structure` | `S03/program-model.json`、`S03/call-graph.json`、`S03/code-data-boundary-audit.json` |
 | `recover-arm64-boot-flow` | `S04/boot-model.json` |
 | `recover-arm64-exception-model` | `S04/exception-model.json` |
 | `recover-arm64-context-layout` | `S04/context-layouts.jsonl` |
@@ -383,9 +383,11 @@ Evidence、Decision 和 Unknown 使用 append-only 分片：每个 Producer 写
 实际创建 Skill 时按以下顺序实施：
 
 1. 公共治理 Skills。
-2. S00–S04 基础 Skills。
-3. S05–S07 领域 Skills。
-4. S08–S10 合成与审计 Skills。
-5. 最后创建 Orchestrator Skill。
+2. S00–S02 基础闭环 Skills。
+3. S03 程序结构 Skills。
+4. S04 EL2 架构语义 Skills。
+5. S05–S07 领域 Skills。
+6. S08–S10 合成与审计 Skills。
+7. 最后创建 Orchestrator Skill。
 
 先用真实 Artifact 契约验证单个 Skill，再启用 Orchestrator 自动推进。

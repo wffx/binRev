@@ -9,3 +9,21 @@ dist/
 recovered-hypervisor/
 cases/*
 !cases/.gitkeep
+
+# Local reverse-engineering inputs and analysis outputs.
+tests/
+tmp/
+validation/
+
+# Early experimental code is kept local until promoted into skills/.
+prototypes/
+
+# IDA databases and local analysis sidecars.
+*.i64
+*.idb
+*.id0
+*.id1
+*.id2
+*.nam
+*.til
+*.log

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recover EL2 Semantics"
+  short_description: "Index EL2 sysregs and architecture events"
+  default_prompt: "Recover EL2 system-register and architecture-event semantics for the current Image case."

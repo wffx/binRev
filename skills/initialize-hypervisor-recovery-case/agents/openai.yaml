@@ -1,0 +1,4 @@
+interface:
+  display_name: "Initialize Recovery Case"
+  short_description: "Initialize a single-binary recovery case"
+  default_prompt: "Use $initialize-hypervisor-recovery-case to create a case manifest for one recovery binary."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recover Binary Data Objects"
+  short_description: "Recover strings, literals, tables, and data objects"
+  default_prompt: "Use $recover-binary-data-objects to recover data object candidates from IDA xrefs and file regions."

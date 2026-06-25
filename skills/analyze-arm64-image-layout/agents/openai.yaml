@@ -1,0 +1,4 @@
+interface:
+  display_name: "Analyze ARM64 Image Layout"
+  short_description: "Analyze ARM64 Image headers and layout"
+  default_prompt: "Use $analyze-arm64-image-layout to inspect the binary header and embedded object candidates."

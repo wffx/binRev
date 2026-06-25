@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recover ARM64 Context Layout"
+  short_description: "Recover offset-first context layouts"
+  default_prompt: "Recover trap, per-CPU, and vCPU context layouts for the current Image case."

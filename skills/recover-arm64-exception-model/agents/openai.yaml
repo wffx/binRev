@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recover ARM64 Exceptions"
+  short_description: "Recover S04 vector slots and exception paths"
+  default_prompt: "Recover the ARM64 EL2 exception model for the current Image case."

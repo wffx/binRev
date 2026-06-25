@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recover ARM64 Boot Flow"
+  short_description: "Recover S04 boot entry and CPU init flow"
+  default_prompt: "Recover the ARM64 EL2 boot flow for the current Image case."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Stage Output"
+  short_description: "Independently review stage outputs"
+  default_prompt: "Use $review-stage-output to audit a hypervisor recovery stage before the human gate."

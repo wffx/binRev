@@ -1,39 +1,41 @@
-# hvrev
+# binRev
 
-AI Native 的 ARM64 EL2 Hypervisor 静态逆向恢复工程。
+AI Native 的 ARM64 EL2 Hypervisor 静态逆向恢复工作流。
 
-项目当前处于“规范冻结、Skill 尚未实现”阶段。Workflow、Stage、Skill 和
-Artifact Contract 是唯一权威定义；已有 Python/IDAPython 代码仅作为早期原型归档。
+本仓库当前聚焦于“可审计的 workflow + 可复用的 Codex skills”，用于指导在只有一个无符号 ARM64 boot executable `Image` 和 IDA 的约束下，逐步恢复程序结构、EL2 架构语义、运行时对象、VM 服务模型和最终代码仓。
+
+## 当前定位
+
+- 输入边界：单个 little-endian ARM64 boot executable `Image`
+- 已知背景：EL2 Hypervisor / 虚拟机管理程序，可能包含 CPU/vCPU、VM 配置、Stage-2、调度、生命周期、HKIP、中断直通等能力
+- 外部工具：IDA / IDAPython / 可选 Hex-Rays
+- 禁止依赖：外部源码、符号表、日志、DTB、动态运行环境或非 IDA 逆向工具
+- 产物原则：所有结论必须有 artifact、evidence、decision、unknown/accepted-risk 记录
 
 ## 目录结构
 
 ```text
 binRev/
 ├── README.md
+├── arch/
+│   └── stage explanation docs
 ├── specifications/
 │   ├── workflow.md
+│   ├── stage-audit.md
 │   ├── skill-architecture.md
+│   ├── skill-catalog.md
 │   └── contracts/
-│       ├── artifact-contracts.md
-│       ├── ida-tool-contract.md
-│       └── constraint-boundary.md
 ├── skills/
-│   └── .gitkeep
-├── cases/
-│   └── .gitkeep
-└── prototypes/
-    └── static-analysis-mvp/
-        ├── README.md
-        ├── pyproject.toml
-        ├── src/
-        ├── scripts/
-        ├── config/
-        └── tests/
+│   └── <codex-skill>/
+└── cases/
+    └── .gitkeep
 ```
+
+## 主要内容
 
 ### `specifications/`
 
-项目的规范层，也是唯一事实来源：
+规范层，是 workflow、stage、skill 和 artifact contract 的权威定义。
 
 - [Workflow 与 Stage Contract](specifications/workflow.md)
 - [Stage Contract 审计](specifications/stage-audit.md)
@@ -45,74 +47,55 @@ binRev/
 
 ### `arch/`
 
-面向逆向工程师的 Stage 解释文档，用具体问题说明 Stage 的作用：
-
-- [S00 Case 初始化](arch/stage-s00-case-initialization.md)
-- [S04 EL2 架构语义](arch/stage-s04-el2-architecture.md)
-- [S05 运行时基础对象](arch/stage-s05-runtime-object-model.md)
-- [S06 VM 服务模型](arch/stage-s06-vm-service-model.md)
+面向逆向工程师的 Stage 解释文档，用具体问题说明各阶段为什么存在、输入输出是什么、如何避免越界。
 
 ### `skills/`
 
-后续存放真实、可发现的 Codex Skill 包。当前保持为空，因为应先冻结合同，再按照
-公共治理 Skill、基础 Stage Skill、领域 Skill、合成审计 Skill、Orchestrator Skill
-的顺序创建。
+正式 Codex Skill 包。每个 skill 独立描述一个可复用能力，例如：
 
-每个子目录未来必须是独立 Skill：
-
-```text
-skills/<skill-name>/
-├── SKILL.md
-├── agents/openai.yaml
-└── references|scripts|assets/
-```
+- 初始化 case 和约束边界
+- 分析 ARM64 Image 布局
+- 准备 IDA database
+- 恢复函数边界、code/data 边界和间接控制流
+- 恢复 ARM64 EL2 boot/exception/context/sysreg 语义
+- 恢复 CPU/vCPU、Stage-2、VM、scheduler、interrupt、lifecycle、HKIP 等模型
+- 生成报告、覆盖率、代码仓和交付包
 
 ### `cases/`
 
-Workflow 运行实例目录。每个 Case 只能有一个输入 `Image`，运行态 Artifact 按
-`artifact-contracts.md` 保存。案例二进制和分析产物默认不提交到版本库。
+运行实例目录。真实二进制、IDA 数据库、中间分析产物和大体量报告默认不提交，只保留 `.gitkeep`。
+
+## 不上传的本地产物
+
+以下目录/文件默认保留在本地，不进入 GitHub：
+
+- `tests/`
+- `tmp/`
+- `validation/`
+- `prototypes/`
+- `cases/<case-id>/`
+- `*.i64` / `*.idb` / IDA sidecar 文件
+
+其中 `prototypes/` 是早期实验代码，当前 workflow 和 skills 不依赖它；如未来某些能力成熟，应迁移为正式 `skills/` 后再纳入版本库。
+
+## Workflow 总览
 
 ```text
-cases/<case-id>/
-├── input/Image
-├── workflow/
-├── stages/S00...S10/
-└── delivery/
-```
-
-### `prototypes/`
-
-非权威实验实现。现有
-[static-analysis-mvp](prototypes/static-analysis-mvp/README.md)
-可用于验证局部想法，但：
-
-- 不能定义 Workflow 或 Stage。
-- 输出不自动满足 Artifact Contract。
-- 代码不能直接视为正式 Skill 实现。
-- 原型能力应在合同适配和独立验证后才能迁移到 `skills/`。
-
-## 固定边界
-
-- 唯一案例输入：一个 little-endian ARM64 boot executable `Image`
-- 已知背景：EL2 Hypervisor，涉及 CPU/vCPU、VM 配置、Stage-2、调度、生命周期、HKIP 和中断直通
-- 外部逆向工具：仅 IDA/IDAPython；Hex-Rays 可选
-- 不使用外部源码、符号、日志、DTB、平台资料、动态环境或其他逆向工具
-- 交付是静态恢复仓和证据，不承诺可编译、可运行、行为等价或安全证明
-
-## Workflow
-
-```text
-S00 Case 初始化
- -> S01 Image 布局
- -> S02 IDA 地址空间
- -> S03 程序结构
- -> S04 EL2 架构语义
- -> S05 运行时基础对象
- -> S06 VM 服务
+S00 Case 初始化与边界锁定
+ -> S01 Image 格式与内容布局
+ -> S02 IDA 基线与地址空间
+ -> S03 程序结构恢复
+ -> S04 ARM64 EL2 架构语义
+ -> S05 运行时基础对象模型
+ -> S06 VM 服务模型
  -> S07 生命周期与 HKIP
  -> S08 静态代码仓合成
  -> S09 一致性与安全审计
  -> S10 收敛与交付
 ```
 
-实现工作应从 `skills/` 的公共治理 Skills 开始，而不是继续扩展原型 CLI。
+## 当前进展
+
+- S03 支持 code-first 的 `.text` 恢复策略，并能通过 apply/readback/diff/accepted-risk 闭环处理零星残留。
+- S04/S05 已定义 accepted-risk provenance 传播规则。
+- Oracle 或 symbolized IDB 只允许作为 forward-test / 调测材料，不得成为真实逆向流程的生产输入。

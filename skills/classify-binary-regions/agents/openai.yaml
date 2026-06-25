@@ -1,0 +1,4 @@
+interface:
+  display_name: "Classify Binary Regions"
+  short_description: "Classify binary file regions conservatively"
+  default_prompt: "Use $classify-binary-regions to produce a complete region map for the recovery binary."

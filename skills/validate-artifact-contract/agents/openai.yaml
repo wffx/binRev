@@ -1,0 +1,4 @@
+interface:
+  display_name: "Validate Artifact Contract"
+  short_description: "Validate staged recovery artifact contracts"
+  default_prompt: "Use $validate-artifact-contract to verify a hypervisor recovery stage artifact set before review."

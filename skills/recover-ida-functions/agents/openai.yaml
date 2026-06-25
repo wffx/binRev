@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recover IDA Functions"
+  short_description: "Recover function boundaries and calls from IDA"
+  default_prompt: "Use $recover-ida-functions to recover function boundaries, callers, callees, and confidence from an accepted IDA checkpoint."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Enforce Recovery Constraints"
+  short_description: "Lock the recovery boundary and allowed tools"
+  default_prompt: "Use $enforce-recovery-constraints to turn the case boundary into machine-readable constraints."

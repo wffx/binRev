@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prepare IDA Image Database"
+  short_description: "Prepare a neutral IDA baseline database"
+  default_prompt: "Use $prepare-ida-image-database to open one recovery binary or IDB in IDA and capture a neutral baseline."
