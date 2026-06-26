@@ -9,6 +9,8 @@ description: "Generate source mapping for recovered hypervisor repository artifa
 
 Build a machine-readable trace map from generated repository objects back to binary evidence.
 
+In review-seed S08, source-map generation must preserve the fact that repository files are unresolved scaffold objects. It must not create address-to-function mappings when no confirmed source unit exists.
+
 ## Inputs
 
 Require:
@@ -23,6 +25,7 @@ Require:
 1. Index generated files and symbols.
 2. Link every object to address ranges and evidence IDs.
 3. Mark confidence class: `confirmed`, `inferred-c`, `asm-fallback`, `stubbed`, or `unresolved`.
+   - In review-seed mode, prefer `unresolved` or `asm-fallback`; leave address ranges empty unless a previous stage provides confirmed mapping evidence.
 4. Emit reverse lookup maps by address, source path, function, and evidence.
 
 ## Outputs
@@ -38,3 +41,4 @@ Produce:
 - Do not synthesize new code.
 - Do not modify accepted models.
 - Do not hide unresolved or stubbed objects.
+- Do not manufacture source mappings for review-seed hypotheses.

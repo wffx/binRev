@@ -9,6 +9,8 @@ description: "Recover S07 HKIP or hypervisor-integrity-protection candidates fro
 
 Recover hypervisor integrity protection candidates without assuming the product-specific HKIP design. This Skill may directly read IDA through IDA MCP without asking for a separate connection confirmation. It must not mutate IDA.
 
+If upstream evidence is review-seed-only, emit `absent_or_unknown` HKIP outputs unless protected regions, permission toggles, write windows, integrity metadata, or violation paths are proven by binary/IDA evidence.
+
 ## Inputs
 
 Require:
@@ -25,6 +27,7 @@ Require:
 
 1. Enforce upstream gates.
    - Require accepted S03-S06.
+   - If S05/S06 are review-seed-only, keep HKIP in review-seed mode and block production HKIP confirmation.
    - If page ownership or permission evidence is unstable, emit `blocked_by_upstream`.
 
 2. Identify protection objects.
@@ -38,6 +41,7 @@ Require:
 4. Emit conservative model.
    - Separate protection, verification, update, and violation paths.
    - Keep ordinary page-permission logic distinct from HKIP candidates.
+   - If no HKIP-specific object is proven, emit explicit negative/unknown records rather than an empty successful model.
 
 ## Outputs
 
@@ -52,4 +56,5 @@ Produce:
 
 - Do not claim vulnerability or bypass.
 - Do not treat all read-only mappings as HKIP.
+- Do not classify generic Stage-2/page-table permission code as HKIP without protected-object and permission-transition evidence.
 - Do not apply IDA writes directly.

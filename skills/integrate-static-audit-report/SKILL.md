@@ -9,6 +9,8 @@ description: "Integrate S09 consistency, security-invariant, and coverage findin
 
 Merge S09 audit workers into one review-ready static audit package.
 
+If S08 is review-seed-only, integrate a review-seed audit package: consistency and coverage may pass, but security invariants must remain unknown/not-evaluable and production delivery must remain blocked.
+
 ## Inputs
 
 Require:
@@ -24,6 +26,7 @@ Require:
 2. Deduplicate consistency/security/coverage findings.
 3. Preserve accepted-risk and unknown items.
 4. Emit final audit artifacts.
+5. In review-seed mode, run `scripts/generate_s09_review_seed_audit.py`.
 
 ## Outputs
 
@@ -37,3 +40,4 @@ Produce:
 
 - Do not modify source or IDA.
 - Do not hide unresolved risks.
+- Do not present review-seed audits as production acceptance.

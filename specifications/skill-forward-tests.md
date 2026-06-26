@@ -841,3 +841,445 @@ S03-RW14 downstream sync：
 - `cases/xen_arm64-778090a1/stages/S03/stage-manifest.json` 状态为 `accepted`，但包含 `residual_policy.status = accepted-risk`。
 - `cases/xen_arm64-778090a1/stages/S04/stage-manifest.json` 保持 `accepted`，`s05_readiness = ready_with_accepted_risks`。
 - `cases/xen_arm64-778090a1/stages/S05/stage-manifest.json` 不再被 S03 residual 阻塞；当前活动 gate 仍是 S05 自身的 `blocked_until_s05_object_like_owner_root`。
+
+## G03-A/S05-RW9 owner-root continuation plan
+
+当前开发位置：
+
+- S03：`accepted` with `accepted-risk-rw14.jsonl`
+- S04：`accepted`，S05 readiness 为 `ready_with_accepted_risks`
+- S05：`review_required_root_continuation_plan`
+- S06：仍为 `blocked_until_s05_object_like_owner_root`
+
+RW9 输入为 `S05/s05-rw8-root-classification.json`。RW8 的核心问题是 23 个 caller-root match 中没有 object-like root，无法生产化推进到 S06。
+
+RW9 新增 `integrate-hypervisor-runtime-model/scripts/plan_owner_root_continuation.py`，将非 object-like roots 拆成继续追踪队列：
+
+| Queue | Count | 含义 |
+|---|---:|---|
+| `helper_self_loop` | 13 | setup/teardown 命中同一 helper/caller，说明是 helper-local 证据，不是 owner root |
+| `global_state_anchor` | 3 | global/address literal/constant，可作为 service-global/config anchor 继续追踪 |
+| `percpu_state_anchor` | 6 | TPIDR_EL2/system-state root，应先恢复 per-CPU state |
+| `stack_parent_trace` | 1 | stack-local root，需要向 caller parent argument 继续回溯 |
+| `ambiguous_backtrace` | 0 | 当前没有剩余纯 ambiguous backtrace |
+
+结论：
+
+- RW9 是有效进展，因为它把 S05 blocker 从“没有 object-like root”拆成了可执行 trace 队列。
+- 但 RW9 仍没有生成 production ownership link，因此不能让 S06 作为生产阶段启动。
+- 下一步应优先开发 S05-RW10：针对 `percpu_state_anchor` 和 `global_state_anchor` 做 root expansion，尝试把 TPIDR/global anchor 连接到具体 owner/lifetime/resource identity。
+
+## G03-A/S05-RW10 anchor expansion
+
+RW10 新增 `integrate-hypervisor-runtime-model/scripts/expand_owner_root_anchors.py`，输入 RW2/RW3/RW6/RW9，目标是复用已有 S05 evidence 扩展 root anchor，而不是重新扫 IDA。
+
+RW10 结果：
+
+| 项 | 值 |
+|---|---:|
+| per-CPU anchor queue | 6 |
+| global anchor queue | 3 |
+| stack parent trace queue | 1 |
+| production ownership ready | 0 |
+
+主要发现：
+
+- TPIDR/per-CPU 方向存在高密度候选函数：`0x13144`、`0x18ee0`、`0x12360`、`0x468d0`、`0x68254`。
+- `dword_96000` 是 RW9 中唯一 dominant global anchor，但在已有 RW3/RW6 owner traces 中还没有形成 owner/root 闭合。
+- stack-local queue 只有 1 条，必须做 caller parent argument trace，不能直接当 owner。
+
+结论：
+
+- S05 状态推进为 `review_required_anchor_expansion`。
+- S06 仍为 `blocked_until_s05_object_like_owner_root`。
+- 下一步 S05-RW11 应优先做两件事：
+  - 对 dominant TPIDR candidates 做 offset-family write/read expansion。
+  - 对 `dword_96000` 做 xref/write trace，判断它是 service-global state、constant/config，还是 per-CPU table root。
+
+## G03-A/S05-RW11 prepared IDA xref/write trace
+
+已开发并通过 HTTP IDA MCP 执行：
+
+- `integrate-hypervisor-runtime-model/scripts/ida_s05_rw11_anchor_xref_trace.py`
+
+目标：
+
+- 在 IDA 中只读追踪 `dword_96000` 等 global anchors 的 xrefs/read/write。
+- 对 RW10 选出的 TPIDR-heavy functions 追踪 local TPIDR offset-family memory uses。
+- 输出 `S05/s05-rw11-anchor-xref-trace.json`，但不写 IDA、不命名、不应用类型。
+
+当前状态：
+
+- 脚本已通过 Python syntax check。
+- stdio 版 `mcp__ida` 在当前会话仍然返回 `Transport closed`，但全局 Codex MCP 配置已切换为 `http://127.0.0.1:8765`。
+- HTTP MCP 初始化、`open_idb`、`run_script`、`close_idb` 均验证成功。
+- RW11 已产生 `S05/s05-rw11-anchor-xref-trace.json`。
+
+RW11 结果：
+
+| 项 | 值 |
+|---|---:|
+| global anchor | `dword_96000` |
+| global read xrefs | 318 |
+| global write xrefs | 1 |
+| global address-calculation xrefs | 190 |
+| functions referencing global anchor | 93 |
+| TPIDR-heavy functions traced | 5 |
+| TPIDR functions with write-like memory uses | 5 |
+| production ownership ready | 0 |
+
+结论：
+
+- S05 状态推进为 `review_required_ida_anchor_xref_trace`。
+- RW11 证明存在真实 global/per-CPU 写证据，但仍未形成 writer-to-lifetime/resource identity closure。
+- S06 仍保持 `blocked_until_s05_object_like_owner_root`。
+- 下一步 S05-RW12 应围绕唯一 global writer、TPIDR offset-family writers 和相关 lifecycle functions 做 closure tracing。
+
+## G03-A/S05-RW12 writer lifetime closure
+
+RW12 新增并通过 HTTP IDA MCP 执行：
+
+- `integrate-hypervisor-runtime-model/scripts/ida_s05_rw12_writer_lifetime_closure.py`
+- 输入：`S05/s05-rw11-anchor-xref-trace.json`
+- 输出：`S05/s05-rw12-writer-lifetime-closure.json`
+
+RW12 结果：
+
+| 项 | 值 |
+|---|---:|
+| `dword_96000` writer function count | 1 |
+| `dword_96000` write xref count | 1 |
+| TPIDR-heavy function count | 5 |
+| writer directly reaches TPIDR-heavy functions | false |
+| production ownership-ready links | 0 |
+
+唯一 global writer 为 `sub_C0BE4`，写点在 `0xc11b8`：
+
+- `0xc11a0 ADRP X19, #dword_96000@PAGE`
+- `0xc11a4 BL sub_C14B0`
+- `0xc11a8 BL sub_C18A0`
+- `0xc11ac MOV W1, W0`
+- `0xc11b8 STR W1, [X19,#dword_96000@PAGEOFF]`
+
+结论：
+
+- RW12 把 `dword_96000` 从“一个高频 global anchor”收敛为“唯一写入、疑似 init/config/count seed”。
+- 该 writer 没有直接闭合到 RW10/RW11 的 TPIDR-heavy owner-root family。
+- 不能把 `dword_96000` 提升为 VM/vCPU/Stage-2 owner root，也不能作为 S06 生产入口。
+- 下一步 S05-RW13 应追踪 `sub_C18A0` 的返回值来源，以及 `dword_96000` 的主要 reader/consumer 语义，判断它更像 CPU count、boot/config 状态、全局 flag，还是某个 resource table 的界限值。
+
+## G03-A/S05-RW13 global value-source trace
+
+RW13 新增并通过 HTTP IDA MCP 执行：
+
+- `integrate-hypervisor-runtime-model/scripts/ida_s05_rw13_global_value_source_trace.py`
+- 输入：`S05/s05-rw11-anchor-xref-trace.json`、`S05/s05-rw12-writer-lifetime-closure.json`
+- 输出：`S05/s05-rw13-global-value-source-trace.json`
+
+脚本调测修正：
+
+- 第一版能识别 `MOV W1, W0`，但向后扫描到该转发指令后过早停止，漏掉了更早的 `BL sub_C18A0`。
+- 已修正为：先定位 `W1 <- W0` 转发，再继续向更早地址扫描 producer calls。
+- 这条规则应保留到 skill 中：ARM64 返回值经 `W0/X0` 转发到 store operand 时，不能在转发指令处停止，必须继续追最近 call/definition。
+
+RW13 结果：
+
+| 项 | 值 |
+|---|---:|
+| `dword_96000` write xrefs | 1 |
+| return-source functions | 1 |
+| global consumer functions | 93 |
+| production ownership-ready links | 0 |
+
+关键证据：
+
+- `0xc11a8 BL sub_C18A0`
+- `0xc11ac MOV W1, W0`
+- `0xc11b8 STR W1, [X19,#dword_96000@PAGEOFF]`
+- `sub_C18A0` 返回路径包含 `MOV W0, #0`、循环、`TST`、`CINC W0, W0, NE`、`CMP`、`B.NE`，更像位图/count-like 标量计算。
+- top consumer functions 中，条件/控制流/内存访问/缩放索引模式占主导。
+
+结论：
+
+- `dword_96000` 暂定为 review-only scalar/count/config-like global anchor。
+- 它不能作为 S06 的 object-like owner root。
+- 下一步 S05 不能继续围绕 `dword_96000` 硬推 ownership；应转向 RW10/RW11 中的 TPIDR-heavy offset families 或其他 lifecycle-root candidates，寻找真正跨 allocation/init/start/teardown 的 owner object。
+
+## G03-A/S05-RW14 TPIDR offset-family trace
+
+RW14 新增并通过 HTTP IDA MCP 执行：
+
+- `integrate-hypervisor-runtime-model/scripts/ida_s05_rw14_tpidr_offset_family_trace.py`
+- 输入：`S05/s05-rw11-anchor-xref-trace.json`
+- 输出：`S05/s05-rw14-tpidr-offset-family-trace.json`
+
+脚本调测修正：
+
+- 第一版把 `[X6,X2,LSL#3]` 中的 scale `#3` 误统计为字段偏移 `0x3`。已修正为只把 `[Xn,#imm]` 的 base+immediate 形式纳入字段 offset。
+- 第二版把十六进制立即数 `0x108` 中的 `x1` 误识别成寄存器 `X1`。已修正为使用寄存器 token 边界匹配，避免立即数字符串污染数据流。
+- 这两条规则应保留到 TPIDR/字段恢复类 skill 中，避免把寻址 scale 或立即数字符串升级为虚假的 struct field / dataflow。
+
+RW14 结果：
+
+| 项 | 值 |
+|---|---:|
+| TPIDR-heavy functions | 5 |
+| functions with slot-load traces | 5 |
+| interesting local TPIDR events | 579 |
+| global offset families | 6 |
+| production ownership-ready links | 0 |
+
+当前 top offset families：
+
+| offset | reads | writes | functions |
+|---|---:|---:|---:|
+| `0x18` | 56 | 0 | 4 |
+| `0x10` | 13 | 0 | 3 |
+| `0x108` | 12 | 0 | 2 |
+| `0x2f0` | 12 | 0 | 2 |
+| `0x110` | 1 | 0 | 1 |
+| `0x600` | 1 | 0 | 1 |
+
+结论：
+
+- TPIDR-heavy family 比 `dword_96000` 更接近 per-CPU/current-object 入口。
+- 但 RW14 当前证据偏 read-heavy，只能生成 review-only field-family seeds。
+- S06 仍保持 `blocked_until_s05_object_like_owner_root`。
+- 下一步 S05-RW15 应从这些 offset families 反查写入者、初始化者和 teardown/clear 路径，优先寻找同一 slot/field 跨 init/start/stop/destroy 的生命周期闭环。
+
+## G03-A/S05-RW15 TPIDR writer/lifecycle trace
+
+RW15 新增并通过 HTTP IDA MCP 执行：
+
+- `integrate-hypervisor-runtime-model/scripts/ida_s05_rw15_tpidr_writer_lifecycle_trace.py`
+- 输入：`S05/s05-rw14-tpidr-offset-family-trace.json`
+- 输出：`S05/s05-rw15-tpidr-writer-lifecycle-trace.json`
+
+RW15 方法：
+
+- 对 RW14 的 target offsets 做全 IDB same-offset read/write/clear/atomic 扫描。
+- 对每个函数做简化 TPIDR-derived 局部传播，将 same-offset 泛匹配和 TPIDR-confirmed field access 分开。
+- 识别 clear-like 写入，例如 `STR XZR/WZR` 或近邻零值定义。
+- 保持只读，不写 IDA，不应用命名和类型。
+
+RW15 结果：
+
+| 项 | 值 |
+|---|---:|
+| target offsets | 6 |
+| same-offset writer offsets | 6 |
+| same-offset writer functions total | 281 |
+| TPIDR-confirmed functions | 285 |
+| TPIDR-confirmed writer functions | 7 |
+| confirmed TPIDR writer offsets | 2 |
+| production ownership-ready links | 0 |
+
+confirmed TPIDR writer offsets：
+
+| offset | writer count | notable functions |
+|---|---:|---|
+| `0x18` | 10 | `sub_248E4`, `sub_66600`, `sub_20F90`, `sub_5D8F4` |
+| `0x10` | 8 | `sub_248E4`, `sub_66600`, `sub_20F90`, `sub_16BC0`, `sub_5F314`, `sub_9CD0` |
+
+重要样例：
+
+- `sub_248E4@0x2495c`: `STP X14, X1, [X19,#0x18]`
+- `sub_248E4@0x24974`: `STR XZR, [X19,#0x18]`
+- `sub_66600`: `STR XZR, [X2,#0x10]`
+- `sub_5F314@0x5f344`: `STR XZR, [X2,#0x10]`
+- `sub_16BC0@0x16c38`: `STR X21, [X19,#0x10]`
+
+结论：
+
+- RW15 首次把 TPIDR offset family 从 read-heavy seed 推进到 writer/clearer lifecycle candidates。
+- 但 same-offset writer 很多，不能直接把所有同 offset 写入视为同一结构字段。
+- TPIDR-confirmed writer 也仍是 review-only；还必须证明同一 owner object 跨 init/start/stop/destroy，并连接 VM/vCPU/Stage-2 resource identity。
+- 下一步 S05-RW16 应聚焦 `sub_248E4`、`sub_66600`、`sub_20F90`、`sub_5F314` 等函数，做 caller/callee/lifecycle bridge：追参数、返回值、调用前后字段状态，判断它们是 scheduler/current-vCPU、per-CPU object、list node、还是普通 helper-local state。
+
+## G03-A/S05-RW16 lifecycle bridge trace
+
+RW16 新增并通过 HTTP IDA MCP 执行：
+
+- `integrate-hypervisor-runtime-model/scripts/ida_s05_rw16_lifecycle_bridge_trace.py`
+- 输入：`S05/s05-rw15-tpidr-writer-lifecycle-trace.json`、`S05/s05-rw4-lifecycle-edges.json`
+- 输出：`S05/s05-rw16-lifecycle-bridge-trace.json`
+
+RW16 方法：
+
+- 从 RW15 选出 TPIDR-confirmed writer/clearer seed functions。
+- 对每个 seed 收集 callers、callees、附近 call window、strings、sysreg context、write context tags。
+- 与 RW4 lifecycle summaries 做直接函数级交叉。
+- 生成 shared bridge pairs，用于找共同 caller/callee 连接。
+
+调测修正：
+
+- 第一版 `clear_or_zero` 只要窗口里出现 `XZR/WZR` 就打标签，容易把 `NGC X2, XZR` 这类非 store-zero 指令误判成 clear。
+- 已修正为只在 `STR* XZR/WZR`、`STP` 包含 zero register，或明确 `MOV Xn/Wn,#0` 时打 `clear_or_zero`。
+- 这条规则必须保留：zero register 出现在算术/比较中不是生命周期 clear 证据。
+
+RW16 结果：
+
+| 项 | 值 |
+|---|---:|
+| seed functions | 7 |
+| strong bridge candidates | 3 |
+| direct RW4 lifecycle hits | 0 |
+| clear/zero contexts | 6 |
+| shared bridge pairs | 6 |
+| production ownership-ready links | 0 |
+
+strong review candidates：
+
+- `sub_16BC0@0x16bc0`
+- `sub_66600@0x66600`
+- `sub_9CD0@0x9cd0`
+
+notable shared bridge pairs：
+
+- `sub_66600 <-> sub_5F314` share callers `0x661a0`, `0xc0be4`
+- `sub_20F90 <-> sub_248E4` share callee `0x21b84`
+- `sub_66600 <-> sub_248E4` share callee `0x1c18`
+
+结论：
+
+- RW16 将 RW15 的 writer/clearer seed 连接到了更明确的 caller/callee/local lifecycle context。
+- 但没有 direct RW4 lifecycle summary hit，也没有 VM/vCPU/Stage-2 resource identity closure。
+- S06 仍保持 `blocked_until_s05_object_like_owner_root`。
+- 下一步 S05-RW17 应优先沿 `sub_66600/sub_5F314` 的 shared callers `0x661a0`、`0xc0be4` 和 `sub_20F90/sub_248E4` 的 shared callee `0x21b84` 做跨函数参数桥，判断这些 seed 是否属于同一 owner object，而不是仅共享 helper。
+
+## G03-A/S05-RW17 cross-function argument bridge
+
+RW17 新增并通过 HTTP IDA MCP 执行：
+
+- `integrate-hypervisor-runtime-model/scripts/ida_s05_rw17_cross_function_arg_bridge.py`
+- 输入：`S05/s05-rw16-lifecycle-bridge-trace.json`
+- 输出：`S05/s05-rw17-cross-function-arg-bridge.json`
+
+RW17 方法：
+
+- shared caller mode：同一 caller 调用两个 seed functions，比较两个 callsite 的 `X0-X7` 参数 root。
+- shared callee mode：两个 seed functions 调用同一 callee，比较传给 shared callee 的参数 root。
+- 参数 root 只作为 review evidence，不直接升格为 ownership link。
+
+调测修正：
+
+- 第一版把 `ADD Xn, Xn, #symbol@PAGEOFF` 泛化成 `compute ADD`，导致不同字符串/静态地址参数被误判为同 root。
+- 已修正为：当 compute root 没有 surviving source register 时，必须保留 `imm` 和 `text_key`；不同符号地址不得合并。
+- 这条规则必须保留：泛化的算术根不能作为 owner identity，尤其是日志/字符串/静态表地址参数。
+
+RW17 结果：
+
+| 项 | 值 |
+|---|---:|
+| bridge analyses | 7 |
+| strong shared argument roots | 1 |
+| weak shared argument roots | 1 |
+| best bridge score | 11 |
+| production ownership-ready links | 0 |
+
+strong bridge：
+
+- mode：`shared_caller`
+- caller：`sub_661A0@0x661a0`
+- targets：`sub_5F314@0x5f314`、`sub_66600@0x66600`
+- shared roots：
+  - `X1 = dword_97900@PAGEOFF`
+  - `X3 = TPIDR_EL2`
+
+结论：
+
+- RW17 证明 `sub_5F314` 与 `sub_66600` 在 `sub_661A0` 的同一静态/per-CPU 上下文内连续执行。
+- 但共享 root 是 static/per-CPU context，不是 VM/vCPU/Stage-2 resource owner。
+- S06 仍保持 `blocked_until_s05_object_like_owner_root`。
+- 下一步 S05-RW18 应做 S05 convergence/final gate：汇总 RW8-RW17，明确哪些 evidence 足够进入 S06 review seed，哪些仍阻塞 production ownership；如果没有 object-like owner root，应以 `not_accepted_review_required` 结束 S05 开发循环，而不是继续无限盲扫。
+
+## G03-A/S05-RW18 convergence gate
+
+RW18 新增并本地执行：
+
+- `integrate-hypervisor-runtime-model/scripts/finalize_s05_convergence_gate.py`
+- 输入：`runtime-object-model.json`、`S05/s05-rw8-root-classification.json`、`S05/s05-rw13-*` 到 `S05/s05-rw17-*`
+- 输出：`S05/s05-rw18-convergence-gate.json`
+
+RW18 结果：
+
+| 项 | 值 |
+|---|---:|
+| production-ready total | 0 |
+| ownership links | 0 |
+| review-only links | 10 |
+| blocking unknowns | 4 |
+| S05 development loop converged | true |
+
+final status：
+
+- S05：`not_accepted_review_required_converged_no_object_owner_root`
+- S06：`blocked_until_s05_object_like_owner_root`
+
+正向 review seeds：
+
+- RW14：TPIDR-derived slot/offset families。
+- RW15：offset `0x18/0x10` 的 TPIDR-confirmed writer/clearer candidates。
+- RW16：caller/callee/local lifecycle bridge candidates。
+- RW17：`sub_661A0` 中基于 static/per-CPU context 的 strong shared caller bridge。
+
+负向结论：
+
+- RW8 没有 object-like caller/root。
+- RW13 将 `dword_96000` 收敛为 scalar/count-like global。
+- RW17 最强 bridge 仍是 static/per-CPU context，不是 VM/vCPU/Stage-2 resource owner。
+
+验收结论：
+
+- S05 的开发和验证循环已经收敛；继续盲扫 S05 的收益很低。
+- 不能为了进入 S06 伪造 ownership link。
+- 后续若继续，应选择：
+  - 人工审计 RW14-RW17 review seeds；
+  - 提供新证据，例如符号、运行日志、DTB、动态 trace；
+  - 或显式以 `review-seed mode` 进入 S06，而不是 production mode。
+
+## G03-A/S06-RW1 review-seed service model
+
+根据正式约束修正：
+
+- 正式场景只有一个 binary，Oracle、符号样本、日志、DTB、trace 都不可依赖。
+- 大模型只能补充 hypothesis，不能补充事实证据。
+- 因此 S05 使用双 gate：
+  - production gate：blocked，原因是没有 object-like owner root。
+  - review-seed gate：ready，原因是 RW14-RW17 有 binary/IDA 内部证据支撑的 review seeds。
+
+S06-RW1 新增并本地执行：
+
+- `integrate-hypervisor-service-model/scripts/generate_s06_review_seed_service_model.py`
+- 输入：`S05/runtime-object-model.json`、`S05/s05-rw14-*` 到 `S05/s05-rw18-*`
+- 输出：
+  - `S06/vm-config-model.json`
+  - `S06/scheduler-model.json`
+  - `S06/interrupt-model.json`
+  - `S06/service-model.json`
+  - `S06/state-machines.jsonl`
+  - `S06/stage-manifest.json`
+
+S06-RW1 结果：
+
+| 项 | 值 |
+|---|---:|
+| production links | 0 |
+| review-seed links | 2 |
+| blocking unknowns | 3 |
+| S06 production gate | blocked_no_resource_identity |
+| S06 review-seed gate | accepted_review_seed_ready |
+| S07 production readiness | blocked_no_s06_resource_identity |
+| S07 review-seed readiness | ready_for_hypothesis_only |
+
+S06 review-seed hypotheses：
+
+- VM config：存在 embedded/static VM config 的低置信假设，但没有 VM config object identity。
+- Scheduler/per-CPU：TPIDR offset families 和 writer/clearer candidates 支持 per-CPU or scheduler context hypothesis。
+- Interrupt/CPU-local：`sub_661A0 -> sub_5F314/sub_66600` 附近有 DAIF/TPIDR context，但没有 IRQ route identity。
+
+规则沉淀：
+
+- Oracle 只允许调测阶段校准 skill/workflow，正式 evidence 链禁止引用。
+- `model_hypothesis` 可以进入后续 stage，但不得作为 confirmed source fact。
+- `review_seed` 可以驱动 S06/S07 探索，但不得生成 production ownership、resource route 或最终代码语义。

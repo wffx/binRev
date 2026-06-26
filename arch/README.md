@@ -24,3 +24,20 @@ S05：把架构行为组织成 CPU、vCPU、VM、Stage-2 等核心对象
   ↓
 S06：恢复这些对象如何完成配置、调度和中断服务
 ```
+
+## UTF-8 index supplement
+
+- [S07: VM Lifecycle and HKIP Security Lifecycle](stage-s07-security-lifecycle.md)
+- [S08: Repository Synthesis](stage-s08-repository-synthesis.md)
+- [S09: Static Audit](stage-s09-static-audit.md)
+- [S10: Final Report and Delivery Package](stage-s10-delivery-package.md)
+
+Updated stage flow:
+
+```text
+S04 -> S05 -> S06 -> S07 -> S08 -> S09 -> S10
+S07 recovers, or explicitly blocks, VM lifecycle and HKIP security-lifecycle semantics.
+S08 converts accepted models into source, or creates unresolved review-seed scaffolding when production recovery is blocked.
+S09 audits consistency, coverage, and invariants; in review-seed mode it emits unknown/not-evaluable security results only.
+S10 freezes the results into either a production package or an explicitly production-blocked review-seed package.
+```

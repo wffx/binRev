@@ -9,6 +9,8 @@ description: "Package the recovered hypervisor repository and recovery evidence 
 
 Assemble the final deliverable bundle.
 
+If S09 permits only review-seed delivery, package the unresolved scaffold, reports, indexes, hashes, and reproduction notes while marking production status as blocked.
+
 ## Inputs
 
 Require:
@@ -25,6 +27,7 @@ Require:
 2. Generate hashes and package manifest.
 3. Copy/freeze repository, reports, source maps, unresolved indexes, and audit artifacts.
 4. Emit reproduction notes.
+5. In review-seed mode, run `scripts/generate_s10_review_seed_package.py`.
 
 ## Outputs
 
@@ -38,3 +41,4 @@ Produce:
 
 - Do not rerun analysis.
 - Do not omit unknowns, stubs, or unresolved indexes.
+- Do not label the package as a production recovered-source release when S09 production is blocked.

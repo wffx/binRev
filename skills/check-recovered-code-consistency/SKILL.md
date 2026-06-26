@@ -9,6 +9,8 @@ description: "Check static consistency of recovered hypervisor code and models. 
 
 Validate that generated source artifacts remain consistent with accepted recovery evidence.
 
+If S08 is `review_seed_repository_ready_production_blocked`, run only index/source-map consistency checks. Do not compare CFG/calls/constants for unresolved scaffold files.
+
 ## Inputs
 
 Require:
@@ -22,6 +24,7 @@ Require:
 
 1. Verify source-map completeness.
 2. Compare function-level CFG/call/constant/memory-access summaries when available.
+   - In review-seed mode, skip binary-equivalence comparisons for scaffold files without confirmed address mappings.
 3. Check asm fallback ranges and stubs are explicit.
 4. Emit mismatch findings with severity.
 
@@ -36,3 +39,4 @@ Produce:
 
 - Do not repair generated code.
 - Do not rerun IDA analysis.
+- Do not treat unresolved scaffold files as recovered code requiring CFG equivalence.

@@ -9,6 +9,8 @@ description: "Compute recovery coverage metrics for the hypervisor reverse-engin
 
 Compute coverage metrics for acceptance and delivery decisions.
 
+If S08 is review-seed-only, report production recovery coverage as zero for confirmed/inferred source and zero for production security-invariant verdicts.
+
 ## Inputs
 
 Require:
@@ -23,6 +25,7 @@ Require:
 1. Aggregate stage metrics.
 2. Compute coverage by function, edge, type, module, source class, and invariant.
 3. Separate production coverage from forward-test/oracle-only validation.
+   - In review-seed mode, keep unresolved, stubbed, and asm-placeholder counts separate from recovered functional code.
 4. Emit machine-readable and report-ready summaries.
 
 ## Outputs
@@ -35,3 +38,4 @@ Produce:
 ## Boundaries
 
 - Do not inflate metrics by counting unresolved or oracle-only evidence as recovered.
+- Do not count review-seed scaffold files as confirmed source coverage.

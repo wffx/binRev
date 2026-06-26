@@ -9,6 +9,8 @@ description: "Check static security invariants over recovered hypervisor models.
 
 Evaluate security invariants from accepted recovery models and generated trace maps.
 
+If S08 is review-seed-only, emit invariant verdicts as `unknown` / `review_seed_not_evaluable`. Do not issue production `pass` or `fail` verdicts without confirmed source, resource ownership, lifecycle, and HKIP evidence.
+
 ## Inputs
 
 Require:
@@ -24,6 +26,7 @@ Require:
 1. Load invariant definitions.
 2. Check VM page isolation, context separation, HKIP write protection, interrupt route binding, and teardown cleanup evidence.
 3. Mark each invariant as `pass`, `fail`, `unknown`, or `not_applicable`.
+   - In review-seed mode, mark security invariants as `unknown` unless production evidence exists.
 4. Link every verdict to evidence or missing evidence.
 
 ## Outputs
@@ -37,3 +40,4 @@ Produce:
 
 - Do not claim exploitability.
 - Do not convert unknowns into passes.
+- Do not convert review-seed hypotheses into security invariant pass/fail verdicts.

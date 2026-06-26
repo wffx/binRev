@@ -9,6 +9,8 @@ description: "Index recovered repository evidence and unresolved objects. Use in
 
 Create the final S08 evidence and coverage indexes consumed by S09 audit and S10 packaging.
 
+In review-seed S08, compute coverage honestly: confirmed and inferred-C coverage should remain zero if the repository contains only unresolved scaffold and explicit failing stubs.
+
 ## Inputs
 
 Require:
@@ -22,6 +24,7 @@ Require:
 
 1. Aggregate evidence and decision references.
 2. Compute coverage metrics for functions, call graph, types, modules, C output, asm fallback, stubs, and unresolved objects.
+   - In review-seed mode, count unresolved/stubbed objects separately from confirmed or inferred-C recovery.
 3. Check that every source object has traceability.
 4. Emit audit-ready indexes.
 
@@ -38,3 +41,4 @@ Produce:
 
 - Do not change source files.
 - Do not suppress unknowns to improve metrics.
+- Do not treat review-seed scaffold files as recovered functional code.
