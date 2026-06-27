@@ -26,7 +26,7 @@ Require:
 - `S05/resource-ownership.jsonl`
 - accepted IDA checkpoint or IDA MCP session
 
-For review-seed mode, also accept:
+For legacy v1 review-seed mode only, also accept:
 
 - `S05/s05-rw14-tpidr-offset-family-trace.json`
 - `S05/s05-rw15-tpidr-writer-lifecycle-trace.json`
@@ -73,3 +73,29 @@ Produce:
 - Do not apply IDA writes directly.
 - Do not use oracle, symbolized samples, source code, logs, DTB, or dynamic traces in production mode.
 - Do not let large-model semantic guesses become confirmed service relationships. Label them `model_hypothesis`.
+
+## Workflow v2 override: S06 type and object propagation
+
+When the workflow uses `workflow-source-recovery-v2.md`, this Skill acts as S06 type, structure, global object, and argument propagation.
+
+This v2 contract supersedes the legacy S06/S07 service-model contract above. In v2, do not require or consume legacy review-seed files such as `S05/s05-rw15-*` or `S05/s05-rw17-*` unless a lab note explicitly asks for backward-compatibility analysis.
+
+Use v2 inputs:
+
+- `S03/functions.jsonl` or an equivalent IDA function export
+- `S04/architecture-model.json` or sysreg/MMIO event export
+- `S05/function-clusters.json`
+- `S05/module-attribution.json`
+- IDA decompile/disassembly evidence for clustered functions
+
+Produce these primary artifacts:
+
+- `S06/type-candidates.json`
+- `S06/struct-layouts.jsonl`
+- `S06/global-object-model.json`
+- `S06/argument-flow.jsonl`
+- `S06/ida-type-proposal.json`
+
+Infer offset families, global roots, scalar/config/count globals, and cross-function argument roots. Separate confirmed layouts from hypotheses. Do not generate source code and do not use Oracle names as production evidence.
+
+In corpus-wide mode, emit `S06/name-candidates.jsonl` for every clustered function. Prefer evidence-backed semantic names, otherwise use stable module-local names and keep addresses only in comments/source maps.

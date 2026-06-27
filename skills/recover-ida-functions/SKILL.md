@@ -74,11 +74,21 @@ Require:
    - Production S03 uses the same loop shape: scan code-bearing ranges, propose boundary/code repairs, apply reviewed changes, export word/function state, compare readback against expected invariants, and iterate until blockers are zero or accepted-risk.
    - The oracle branch only replaces the expected-state source during lab tuning; it does not change the production exit contract.
 
+10. Repair wrong tail-chunk ownership before code generation.
+   - If a candidate entry is code but `get_func(candidate)` returns a function whose `start_ea` differs, inspect function chunks before treating it as unresolved.
+   - If the candidate belongs to an unrelated owner as a tail chunk, propose `remove_func_tail(owner, candidate)` followed by an exact `add_func(candidate, end)` only when the chunk has a bounded control-flow role.
+   - If a candidate is a shared suffix/local entry inside a larger function, split only when target-only evidence supports an independent entry: direct branch-to-entry, bounded suffix ending in return/tail branch, and architecture side effects that are coherent without the prefix.
+   - After any repair, read back `get_func(candidate).start_ea == candidate` and Hex-Rays/disassembly availability before allowing S07 to mark it `codegen_ready`.
+   - Do not lift Hex-Rays output for a containing function into source for the candidate address. A containing-function decompile is evidence for S03 repair, not evidence for S08 source.
+
 ## Outputs
 
 Produce:
 
 - `S03/functions.jsonl`
+- `S03/call-graph.json`
+- `S03/function-boundary-issues.jsonl`
+- `S03/unowned-code-ranges.jsonl`
 - `S03/records/recover-ida-functions.evidence.jsonl`
 - `S03/records/recover-ida-functions.decisions.jsonl`
 - `S03/records/recover-ida-functions.unknowns.jsonl`
@@ -104,3 +114,9 @@ Each function record should include:
 - Do not hide unresolved function boundaries.
 - Do not let a successful IDA writeback substitute for branch-level boundary validation.
 - Do not read or depend on external symbol files during production recovery.
+
+## Workflow v2 corpus-wide operation
+
+For full source-repository recovery, do not use a fixed target address list. Run `scripts/export_full_ida_corpus.py` through IDA MCP to export all IDA functions, call graph edges, boundary issues, unowned code ranges, architecture events, and `S07/decompile-export-full.json`.
+
+S03 corpus-wide exit requires every IDA function to appear in `S03/functions.jsonl`. Remaining unowned executable ranges or multi-chunk functions must be explicit in `function-boundary-issues.jsonl` or `unowned-code-ranges.jsonl`.

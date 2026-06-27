@@ -20,6 +20,13 @@ Require:
 - `S09/static-audit-report.md`
 - coverage and unresolved indexes
 
+Workflow v2 may instead require:
+
+- `S08/source-repo-delivery.json`
+- `S09/source-repo-audit.json`
+- `S09/static-audit-report.md`
+- canonical source repository under `recovered-repos/<case-id>/recovered-hypervisor/`
+
 ## Workflow
 
 1. Summarize input constraints and tool boundary.
@@ -27,6 +34,7 @@ Require:
 3. Report coverage, confidence classes, unresolved items, and safety invariants.
    - In review-seed mode, report security invariants as unknown/not-evaluable and confirmed/inferred source coverage as zero.
 4. Include exact artifact references and hashes.
+5. In workflow v2, clearly distinguish the delivered source repository from the evidence workspace and report `.c`/`.h` counts plus source-repo purity status.
 
 ## Outputs
 

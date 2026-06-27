@@ -84,3 +84,23 @@ Produce:
 - Do not apply IDA writes directly.
 - Do not use validation-only Oracle/symbolized samples as production evidence.
 - Do not promote `model_hypothesis` lifecycle or HKIP records to confirmed source semantics.
+
+## Workflow v2 override: S07 IDA decompile optimization
+
+When the workflow uses `workflow-source-recovery-v2.md`, this Skill acts as the S07 IDA decompile optimization loop.
+
+Produce these primary artifacts:
+
+- `S07/ida-change-proposal.json`
+- `S07/ida-change-transactions.jsonl`
+- `S07/decompile-quality-report.json`
+- `S07/codegen-ready-functions.jsonl`
+
+Classify each selected function as:
+
+- `lifted-c`: source may be generated close to IDA/Hex-Rays and assembly;
+- `semantic-c`: source may be cleaned after evidence-backed type/name propagation;
+- `asm-fallback`: source must remain assembly;
+- `unresolved`: no source file may be generated.
+
+Every codegen-ready record must include address range, boundary status, decompile status, side effects, evidence, confidence, and output class. Oracle may be used only to score the workflow in validation artifacts.

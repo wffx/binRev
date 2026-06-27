@@ -110,3 +110,39 @@ Produce:
 - Do not silently resolve ownership conflicts by choosing the most familiar open-source design.
 - Do not apply IDA writes directly.
 - Do not use external symbols, source code, logs, DTB, traces, or non-IDA reverse tools.
+
+## Workflow v2 override: S05 function clustering
+
+When the workflow uses `workflow-source-recovery-v2.md`, this Skill acts as S05 function clustering and module attribution.
+
+Produce these primary artifacts:
+
+- `S05/function-clusters.json`
+- `S05/module-attribution.json`
+- `S05/cluster-readiness.json`
+
+Cluster functions by:
+
+- S03 boundaries and call graph;
+- S04 architecture events;
+- sysreg/MMIO access families;
+- TPIDR_EL2/VTTBR_EL2/VTCR_EL2/TLBI/ICH/CNT/GIC anchors;
+- xrefs, globals, strings, and data-object neighborhoods.
+
+Do not require final VM/vCPU/Stage-2 ownership before S06. S05 v2 readiness means a cluster is ready for type/object/argument propagation, not that the business object model is proven.
+
+In corpus-wide mode, S05 must cluster every S03 function and produce `S05/directory-plan.json`. Low-confidence functions must be routed to `recovered/unknown/cluster_xx` rather than omitted. Report total function count, clustered function count, and unknown-cluster count.
+
+## Workflow v2 override: S06 offset/global type seeds
+
+When the workflow uses `workflow-source-recovery-v2.md`, run `scripts/recover_offset_global_families.py --case-id <case-id> --emit-header` after S07/S08 corpus exports exist.
+
+This S06 pass must:
+
+- mine Hex-Rays pseudocode for repeated argument-base offsets such as `a1 + 0x18`;
+- record access width, hit count, function count, source file, module, and examples;
+- mine high-frequency `qword_*`, `dword_*`, `byte_*` globals and classify them as review-only global state candidates;
+- emit `S06/struct-layouts.jsonl`, `S06/global-object-model.json`, `S06/argument-flow.jsonl`, `S06/type-candidates.json`, and `S06/offset-global-recovery-summary.json`;
+- optionally emit `include/recovered/recovered_objects.h` into the canonical source repo as a review-seed header.
+
+Do not treat candidate structs as confirmed source layouts. If offsets overlap or ownership is unknown, generated headers must preserve field offsets in comments and use raw storage rather than pretending the exact C struct is known. Do not apply IDA type writes from this pass without a reviewed S07 transaction.

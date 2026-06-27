@@ -84,3 +84,55 @@ Review-seed exit requires:
 - Do not rerun analysis.
 - Do not omit unknowns, stubs, or unresolved indexes.
 - Do not present review-seed delivery as production source recovery.
+
+## Workflow v2 source delivery
+
+When using `workflow-source-recovery-v2.md`, S10 must package source and evidence separately:
+
+```text
+S10/deliverable/
+├── source/
+│   └── recovered-hypervisor/
+├── evidence/
+│   ├── S08/
+│   └── S09/
+└── reports/
+```
+
+The canonical source payload is:
+
+```text
+S10/deliverable/source/recovered-hypervisor/
+```
+
+It must contain `.c` and `.h` files and must not contain JSON, JSONL, SQLite, IDA database files, or other intermediate analysis artifacts. Evidence JSON/JSONL files may be packaged only under `S10/deliverable/evidence/`.
+
+Additional v2 inputs:
+
+```text
+recovered-repos/<case-id>/recovered-hypervisor/
+S08/source-repo-delivery.json
+S08/function-map.json
+S08/source-map.json
+S08/source-quality-report.json
+S09/source-repo-audit.json
+S09/static-audit-report.json
+S09/static-audit-report.md
+```
+
+Additional v2 outputs:
+
+```text
+S10/final-recovery-report.md
+S10/final-recovery-report.json
+S10/deliverable/source/recovered-hypervisor/
+S10/deliverable/evidence/
+S10/deliverable/reports/
+S10/package-manifest.json
+S10/artifact-hashes.json
+S10/artifact-validation-rw1.json
+```
+
+V2 exit condition: the source payload is clean, hashes cover all packaged files, and the final report does not describe the evidence workspace as the source repository.
+
+S10 must preserve the exact upstream status. In particular, a source payload with full function coverage and full pseudocode review-view coverage still remains `source_corpus_lifted` if S09 reports high wrapper-body or IDA-residue ratios.
