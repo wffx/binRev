@@ -1,6 +1,6 @@
 ---
 name: check-hypervisor-security-invariants
-description: "Check static security invariants over recovered hypervisor models. Use in S09 to evaluate VM isolation, vCPU context separation, HKIP write protection, interrupt route binding, and cleanup invariants from accepted S05-S08 artifacts."
+description: "Check static security invariants over recovered hypervisor models. Use in S08 to evaluate VM isolation, vCPU context separation, HKIP write protection, interrupt route binding, and cleanup invariants from accepted S05-S07 artifacts."
 ---
 
 # Check Hypervisor Security Invariants
@@ -33,8 +33,8 @@ Require:
 
 Produce:
 
-- `S09/security-invariants.json`
-- `S09/security-findings.jsonl`
+- `S08/security-invariants.json`
+- `S08/security-findings.jsonl`
 
 ## Boundaries
 

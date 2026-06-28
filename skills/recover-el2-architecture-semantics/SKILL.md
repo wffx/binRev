@@ -1,6 +1,6 @@
 ---
 name: recover-el2-architecture-semantics
-description: "Recover S04 ARM64 EL2 architecture semantics from IDA evidence. Use to index MRS/MSR system-register accesses, HVC/SMC/ERET, TLBI/cache/barrier instructions, timer/GIC/SMMU-like architecture events, and their data/control dependencies without assigning high-level business modules."
+description: "Recover S03 ARM64 EL2 architecture semantics from IDA evidence. Use to index MRS/MSR system-register accesses, HVC/SMC/ERET, TLBI/cache/barrier instructions, timer/GIC/SMMU-like architecture events, and their data/control dependencies without assigning high-level business modules."
 ---
 
 # Recover EL2 Architecture Semantics
@@ -13,22 +13,22 @@ Create an architecture-event index grounded in target instructions. This Skill m
 
 Require:
 
-- `S03/stage-manifest.json`
-- `S03/program-model.json`
-- `S03/functions.jsonl`
-- `S03/call-graph.json`
-- `S03/unresolved-regions.jsonl`
-- `S03/unresolved-regions*.jsonl` when rework iterations exist
-- `S04/boot-model.json` when available
-- `S04/exception-model.json` when available
-- accepted IDA checkpoint or IDA MCP session
+- `S02/stage-manifest.json`
+- `S02/program-model.json`
+- `S02/functions.jsonl`
+- `S02/call-graph.json`
+- `S02/unresolved-regions.jsonl`
+- `S02/unresolved-regions*.jsonl` when rework iterations exist
+- `S03/boot-model.json` when available
+- `S03/exception-model.json` when available
+- `S01/ida-baseline.i64`
 
 ## Workflow
 
-1. Run the S03 gate preflight.
-   - Read `S03/stage-manifest.json` and all available unresolved-region files.
-   - If S03 is not `accepted` or contains blocking unresolved code/data/blob ranges, run only in `forward_test_deferred_by_s03_rework` mode.
-   - Architecture events may still be indexed in forward-test mode, but every event overlapping or depending on an unresolved blob must carry `blocked_by_s03_unresolved_blob`.
+1. Run the S02 gate preflight.
+   - Read `S02/stage-manifest.json` and all available unresolved-region files.
+   - If S02 is not `accepted` or contains blocking unresolved code/data/blob ranges, run only in `forward_test_deferred_by_s02_rework` mode.
+   - Architecture events may still be indexed in forward-test mode, but every event overlapping or depending on an unresolved blob must carry `blocked_by_s02_unresolved_blob`.
    - Do not promote sysreg-heavy unowned code inside unresolved blobs into architecture roots.
 
 2. Connect to IDA read-only and record transport metadata.
@@ -53,17 +53,17 @@ Require:
 6. Emit semantics conservatively.
    - Architecture action may be confirmed; business role remains candidate.
    - Example: `MSR VTTBR_EL2` confirms a Stage-2 root switch event, not a VM lifecycle function.
-   - Emit `s03_gate_status`, `unresolved_dependencies`, and `production_eligible: false` when S03 is not accepted.
+   - Emit `s02_gate_status`, `unresolved_dependencies`, and `production_eligible: false` when S03 is not accepted.
 
 ## Outputs
 
 Produce:
 
-- `S04/sysreg-accesses.jsonl`
-- `S04/architecture-events.jsonl`
-- `S04/records/recover-el2-architecture-semantics.evidence.jsonl`
-- `S04/records/recover-el2-architecture-semantics.decisions.jsonl`
-- `S04/records/recover-el2-architecture-semantics.unknowns.jsonl`
+- `S03/sysreg-accesses.jsonl`
+- `S03/architecture-events.jsonl`
+- `S03/records/recover-el2-architecture-semantics.evidence.jsonl`
+- `S03/records/recover-el2-architecture-semantics.decisions.jsonl`
+- `S03/records/recover-el2-architecture-semantics.unknowns.jsonl`
 
 Architecture-event records should include:
 
@@ -77,7 +77,7 @@ Architecture-event records should include:
 - `local_dependency`
 - `candidate_semantic`
 - `confidence`
-- `s03_gate_status`
+- `s02_gate_status`
 - `unresolved_dependencies`
 - `production_eligible`
 

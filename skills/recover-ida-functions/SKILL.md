@@ -85,13 +85,13 @@ Require:
 
 Produce:
 
-- `S03/functions.jsonl`
-- `S03/call-graph.json`
-- `S03/function-boundary-issues.jsonl`
-- `S03/unowned-code-ranges.jsonl`
-- `S03/records/recover-ida-functions.evidence.jsonl`
-- `S03/records/recover-ida-functions.decisions.jsonl`
-- `S03/records/recover-ida-functions.unknowns.jsonl`
+- `S02/functions.jsonl`
+- `S02/call-graph.json`
+- `S02/function-boundary-issues.jsonl`
+- `S02/unowned-code-ranges.jsonl`
+- `S02/records/recover-ida-functions.evidence.jsonl`
+- `S02/records/recover-ida-functions.decisions.jsonl`
+- `S02/records/recover-ida-functions.unknowns.jsonl`
 
 Each function record should include:
 
@@ -105,6 +105,14 @@ Each function record should include:
 - `callees`
 - `boundary_evidence`
 - `open_questions`
+- `frame_size` — Largest SP-relative offset detected in function prologue (0 if no STP/LDP)
+- `saved_regs` — List of registers pushed via STP in the prologue (first 8 unique)
+- `restored_regs` — List of registers popped via LDP in the epilogue (first 8 unique)
+- `has_context_frame` — True if frame_size >= 0x10 (provides direct input for S03 context-layout)
+
+## Reusable Scripts
+
+- `scripts/export_functions_with_context.py` — IDAPython: exports all functions with call graph edges AND stack frame/context offset data. Runs `extract_stack_frame()` on each function to capture STP/LDP SP-relative offsets, saved/restored registers, and frame size. Eliminates the need for S03 to re-scan functions for context layout patterns.
 
 ## Boundaries
 

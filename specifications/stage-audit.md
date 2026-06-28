@@ -1,6 +1,6 @@
 # Stage Contract 审计
 
-本审计针对 [workflow.md](workflow.md) 的 S00–S10。审计标准固定为：
+本审计针对 [workflow.md](workflow.md) 的 S00–S09。审计标准固定为：
 
 1. 目标明确且只包含一个状态转换。
 2. 输入穷举必需 Artifact 和 accepted checkpoint。
@@ -13,33 +13,31 @@
 
 | Stage | 目标 | 输入 | 产物 | Skill 路由 | 退出条件 | 边界 | 结论 |
 |---|---|---|---|---|---|---|---|
-| S00 | 通过 | 通过 | 通过 | 串行初始化→约束→Review→人工门禁 | 三态齐全 | 不解析样本 | 通过 |
-| S01 | 通过 | 通过 | 通过 | 布局→区域分类→Review | 三态齐全 | 文件偏移层，不进 IDA | 通过 |
-| S02 | 通过 | 通过 | 通过 | IDA load→地址迭代→人工门禁→checkpoint | 三态齐全 | 中性 baseline，不加业务语义 | 通过 |
-| S03 | 通过 | 通过 | 通过 | 函数/数据并行→text code-first→全量 code/data boundary→间接流→集成→IDA commit | 三态齐全；主 `.text` 中间 qword/data 或未审核 `.inst fallback` 必须 rework/block；小范围 residual 可经 accepted-risk waiver 继续 | 只恢复程序结构，但必须清洁 code/data 边界 | 通过；当前 xen_arm64 case 为 `accepted` with `accepted-risk-rw14.jsonl` |
-| S04 | 通过 | 通过；必须读取 S03 manifest 与 unresolved blobs | 通过；forward-test 产物不得冒充 accepted checkpoint | boot/exception/architecture 并行→context→集成；S03 未 accepted 时只能 forward-test | 三态齐全；S03 blocking unresolved 会阻塞 accepted/S05-ready | 只确认架构语义；不升级 unresolved blob 内代码为 architecture root | 设计通过；当前 xen_arm64 case 已 accepted |
-| S05 | 通过 | 通过；必须要求 S03/S04 accepted | 通过；上游未 accepted 时只允许 `blocked_by_upstream` | CPU/vCPU 与 Stage-2 并行→runtime 集成 | 三态齐全；上游 gate 未通过时不得产生 S06-ready ownership；ownership 未解时必须 review/block S06 | 不恢复服务策略 | 设计通过；当前 xen_arm64 case 为 `review_required_root_classification` |
-| S06 | 通过 | 通过 | 通过 | config/scheduler/IRQ 并行→service 集成 | 三态齐全 | 不修改基础 ownership | 通过 |
-| S07 | 通过 | 通过 | 通过 | lifecycle/HKIP 并行→security-lifecycle 集成 | 三态齐全 | 不直接判定漏洞 | 通过 |
-| S08 | 通过 | 通过 | 通过 | repository→source map→index 串行 | 三态齐全 | 不重新分析、不写 IDA | 通过 |
-| S09 | 通过 | 通过 | 通过 | consistency/security/coverage 并行→audit 集成 | 三态齐全 | 只读静态审计 | 通过 |
-| S10 | 通过 | 通过 | 通过 | report→package→Review→最终人工门禁 | 三态齐全 | 只冻结和总结 | 通过 |
+| S00 | 通过 | 通过 | 通过 | 串行初始化→约束→布局→区域分类→Review→人工门禁 | 三态齐全 | 文件偏移层，不进 IDA；不解析样本 | 通过 |
+| S01 | 通过 | 通过 | 通过 | IDA load→地址迭代→人工门禁→checkpoint | 三态齐全 | 中性 baseline，不加业务语义 | 通过 |
+| S02 | 通过 | 通过 | 通过 | 函数/数据并行→text code-first→全量 code/data boundary→间接流→集成→IDA commit | 三态齐全；主 `.text` 中间 qword/data 或未审核 `.inst fallback` 必须 rework/block；小范围 residual 可经 accepted-risk waiver 继续 | 只恢复程序结构，但必须清洁 code/data 边界 | 通过；当前 xen_arm64 case 为 `accepted` with `accepted-risk-rw14.jsonl` |
+| S03 | 通过 | 通过；必须读取 S02 manifest 与 unresolved blobs | 通过；forward-test 产物不得冒充 accepted checkpoint | boot/exception/architecture 并行→context→集成；S02 未 accepted 时只能 forward-test | 三态齐全；S02 blocking unresolved 会阻塞 accepted/S04-ready | 只确认架构语义；不升级 unresolved blob 内代码为 architecture root | 设计通过；当前 xen_arm64 case 已 accepted |
+| S04 | 通过 | 通过；必须要求 S02/S03 accepted | 通过；上游未 accepted 时只允许 `blocked_by_upstream` | CPU/vCPU 与 Stage-2 并行→runtime 集成 | 三态齐全；上游 gate 未通过时不得产生 S05-ready ownership；ownership 未解时必须 review/block S05 | 不恢复服务策略 | 设计通过；当前 xen_arm64 case 为 `review_required_root_classification` |
+| S05 | 通过 | 通过 | 通过 | config/scheduler/IRQ 并行→service 集成 | 三态齐全 | 不修改基础 ownership | 通过 |
+| S06 | 通过 | 通过 | 通过 | lifecycle/HKIP 并行→security-lifecycle 集成 | 三态齐全 | 不直接判定漏洞 | 通过 |
+| S07 | 通过 | 通过 | 通过 | repository→source map→index 串行 | 三态齐全 | 不重新分析、不写 IDA | 通过 |
+| S08 | 通过 | 通过 | 通过 | consistency/security/coverage 并行→audit 集成 | 三态齐全 | 只读静态审计 | 通过 |
+| S09 | 通过 | 通过 | 通过 | report→package→Review→最终人工门禁 | 三态齐全 | 只冻结和总结 | 通过 |
 
 ## Stage 依赖审计
 
 | Stage | 直接依赖 | 不允许跳过的原因 |
 |---|---|---|
 | S00 | 无 | 建立 Case ID、hash 和约束 |
-| S01 | S00 | 所有观察必须绑定唯一 Image |
-| S02 | S00、S01 | IDA 装载必须依据已确认文件边界 |
-| S03 | S01、S02 | 函数/数据恢复依赖 region 与 address space |
-| S04 | S03 | 架构语义依赖稳定程序结构和已清洁 code/data boundary |
-| S05 | S03、S04 | runtime object 依赖函数图、context 和 sysreg |
-| S06 | S03–S05 | 服务模型依赖 runtime ownership |
-| S07 | S04–S06 | 生命周期/HKIP 依赖架构、资源和服务关系 |
-| S08 | S03–S07 | 代码仓只能合成 accepted 模型 |
-| S09 | S03–S08 | 审计需要原模型、证据和恢复仓 |
-| S10 | S00–S09 | 交付只能冻结全部 accepted Artifact |
+| S01 | S00 | IDA 装载必须依据已确认文件边界 |
+| S02 | S00、S01 | 函数/数据恢复依赖 region 与 address space |
+| S03 | S02 | 架构语义依赖稳定程序结构和已清洁 code/data boundary |
+| S04 | S02、S03 | runtime object 依赖函数图、context 和 sysreg |
+| S05 | S02–S04 | 服务模型依赖 runtime ownership |
+| S06 | S03–S05 | 生命周期/HKIP 依赖架构、资源和服务关系 |
+| S07 | S02–S06 | 代码仓只能合成 accepted 模型 |
+| S08 | S02–S07 | 审计需要原模型、证据和恢复仓 |
+| S09 | S00–S08 | 交付只能冻结全部 accepted Artifact |
 
 ## Skill 路由审计
 
@@ -52,10 +50,10 @@
 
 ### IDA 安全
 
-- S02–S07 的 Producer 只能生成 IDA proposal。
+- S01–S06 的 Producer 只能生成 IDA proposal。
 - `apply-reviewed-ida-changes` 只能接收 reviewed proposal。
 - 每个 Stage 接受前保存 IDA checkpoint。
-- S08–S10 对 accepted IDA checkpoint 只读。
+- S07–S09 对 accepted IDA checkpoint 只读。
 
 ### Review 独立性
 
@@ -91,18 +89,18 @@
 3. 人工门禁的授权主体和 UI 交互尚未实现。
 4. IDA checkpoint 与 transaction 的具体适配层仍需在实际 IDA 环境验证。
 5. 覆盖率阈值暂不作为硬编码退出条件，避免在单样本静态场景中制造虚假完成度。
-6. G02-B forward-test 已发现 S03 需要新增分支级质量门：孤立函数写回成功不足以证明程序结构恢复可被 S04 消费。
-7. S03 现新增全量 code/data boundary 门禁：未识别 bit/data/data-island 问题不得带入 S04；若无法在固定约束下结构化分类，Stage 必须 rework 或 blocked。
-8. S03-RW9 人工 IDA 复核发现 head/tail 可视性缺口：data-island 地址即使 `is_unknown=false`，若落在 data item tail 且没有 owning-head 映射，也会被人工误判为未修复。S03 验收必须包含 point-level head/tail readback。
-9. S03-RW10 根据目标约束改为 text-middle code-first：中间 `.text` 不应默认保留 qword/DCQ data island。当前已将可解码 word 转 code，并将不可解码 word 标成 `.inst fallback` blocker；因此先前 S03 accepted 状态被标记为 stale/rework。
+6. G02-B forward-test 已发现 S02 需要新增分支级质量门：孤立函数写回成功不足以证明程序结构恢复可被 S03 消费。
+7. S02 现新增全量 code/data boundary 门禁：未识别 bit/data/data-island 问题不得带入 S03；若无法在固定约束下结构化分类，Stage 必须 rework 或 blocked。
+8. S03-RW9 人工 IDA 复核发现 head/tail 可视性缺口：data-island 地址即使 `is_unknown=false`，若落在 data item tail 且没有 owning-head 映射，也会被人工误判为未修复。S02 验收必须包含 point-level head/tail readback。
+9. S03-RW10 根据目标约束改为 text-middle code-first：中间 `.text` 不应默认保留 qword/DCQ data island。当前已将可解码 word 转 code，并将不可解码 word 标成 `.inst fallback` blocker；因此先前 S02 accepted 状态被标记为 stale/rework。
 10. S03-RW11 已建立 `xen_arm64.i64` 到 `xen-syms_arm64.i64` 的 validation-only oracle map；dominant delta 为 `0xa0000200000`，可用于调测 skill 偏差，但不得导入生产证据链。
-11. S03-RW12/RW13 将 oracle-code residual 从大批量 `.inst fallback` 收敛到 6 个点；该修复过程具有普适性的是“code-first apply/readback/compare/iterate/residual-risk”闭环，而不是依赖特定 oracle。
-12. S03-RW14 根据用户继续推进决策，将 6 个 residual 显式转为 `accepted-risk`；S03 可进入 `accepted`，但 downstream 必须携带 `accepted-risk-rw14.jsonl` provenance。
+11. S03-RW12/RW13 将 oracle-code residual 从大批量 `.inst fallback` 收敛到 6 个点；该修复过程具有普适性的是"code-first apply/readback/compare/iterate/residual-risk"闭环，而不是依赖特定 oracle。
+12. S03-RW14 根据用户继续推进决策，将 6 个 residual 显式转为 `accepted-risk`；S02 可进入 `accepted`，但 downstream 必须携带 `accepted-risk-rw14.jsonl` provenance。
 
 ## Current case update: xen_arm64 S05-RW1
 
-- S03 is accepted again for the local `xen_arm64` case after S03-RW14, with explicit residual accepted-risk provenance.
-- S05 has advanced from seed-only output to runtime-anchor clustering, local dataflow slicing, owner/base-root tracing, lifecycle-edge tracing, teardown candidate discovery, owner/root matching, caller argument propagation, and root-class classification.
-- Current S05 status is `review_required_root_classification`.
-- Current S06 gate remains `blocked_until_s05_object_like_owner_root`.
-- The blocking reason is no longer upstream S03/S04; it is unresolved CPU/vCPU/VM/Stage-2 ownership and lifetime links inside S05.
+- S02 is accepted again for the local `xen_arm64` case after S03-RW14, with explicit residual accepted-risk provenance.
+- S04 has advanced from seed-only output to runtime-anchor clustering, local dataflow slicing, owner/base-root tracing, lifecycle-edge tracing, teardown candidate discovery, owner/root matching, caller argument propagation, and root-class classification.
+- Current S04 status is `review_required_root_classification`.
+- Current S05 gate remains `blocked_until_s04_object_like_owner_root`.
+- The blocking reason is no longer upstream S02/S03; it is unresolved CPU/vCPU/VM/Stage-2 ownership and lifetime links inside S04.

@@ -395,7 +395,7 @@ def main() -> None:
         {
             "case_id": args.case_id,
             "image_sha256": args.image_sha256,
-            "workflow": "workflow-source-recovery-v2",
+            "workflow": "primary",
             "stage_states": {
                 "S00": "created",
                 "S01": "deferred_round2_existing_idb",

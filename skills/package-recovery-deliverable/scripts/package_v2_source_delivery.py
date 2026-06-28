@@ -177,7 +177,7 @@ def package(case_id: str) -> dict[str, Any]:
         "stage_id": "S10",
         "iteration_id": "S10-V2-RW1",
         "generated_at": now_iso(),
-        "workflow": "workflow-source-recovery-v2",
+        "workflow": "primary",
         "status": delivery_status,
         "canonical_source_repo": delivery["canonical_source_repo"],
         "delivered_source_path": "deliverable/source/recovered-hypervisor",

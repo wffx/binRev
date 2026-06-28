@@ -1,6 +1,6 @@
 ---
 name: recover-hypervisor-cpu-vcpu-model
-description: "Recover S05 CPU/vCPU runtime object candidates from accepted S03 and S04 ARM64 EL2 evidence. Use when the workflow needs MPIDR/per-CPU/vCPU/context-reference relationships, CPU on/off paths, world-switch anchors, and ownership-safe runtime object evidence without assigning VM service policy."
+description: "Recover S04 CPU/vCPU runtime object candidates from accepted S02 and S03 ARM64 EL2 evidence. Use when the workflow needs MPIDR/per-CPU/vCPU/context-reference relationships, CPU on/off paths, world-switch anchors, and ownership-safe runtime object evidence without assigning VM service policy."
 ---
 
 # Recover Hypervisor CPU/vCPU Model
@@ -13,25 +13,26 @@ Recover CPU, per-CPU, vCPU, and context-reference candidates from target Image a
 
 Require:
 
+- `S02/stage-manifest.json`
+- `S02/program-model.json`
+- `S02/functions.jsonl`
+- `S02/call-graph.json`
+- `S02/indirect-targets.jsonl`
+- `S02/unresolved-regions*.jsonl`
 - `S03/stage-manifest.json`
-- `S03/program-model.json`
-- `S03/functions.jsonl`
-- `S03/call-graph.json`
-- `S03/indirect-targets.jsonl`
-- `S03/unresolved-regions*.jsonl`
-- `S04/stage-manifest.json`
-- `S04/architecture-model.json`
-- `S04/context-layouts.jsonl`
-- `S04/sysreg-accesses.jsonl`
-- `S04/architecture-events.jsonl`
+- `S03/architecture-model.json`
+- `S03/context-layouts.jsonl`
+- `S03/sysreg-accesses.jsonl`
+- `S03/architecture-events.jsonl`
+- `S03/ida-stage.i64`
 - accepted IDA checkpoint or IDA MCP session
 
 ## Workflow
 
 1. Enforce upstream gates.
-   - Require accepted S03 and accepted S04 for production recovery.
-   - If either upstream stage is `rework_required`, `blocked`, or `forward_test_deferred_by_s03_rework`, emit only a blocked/forward-test note; do not produce S05-ready runtime objects.
-   - Treat S03 blocking unresolved blobs and S04 blocking unknowns as hard exclusions for object ownership.
+   - Require accepted S02 and accepted S03 for production recovery.
+   - If either upstream stage is `rework_required`, `blocked`, or `forward_test_deferred_by_s02_rework`, emit only a blocked/forward-test note; do not produce S04-ready runtime objects.
+   - Treat S02 blocking unresolved blobs and S03 blocking unknowns as hard exclusions for object ownership.
 
 2. Connect to IDA read-only and record transport metadata.
 
@@ -53,22 +54,22 @@ Require:
    - Use S04 offset-first context records and save/restore paths.
    - Track world-switch-like paths, `ELR_EL2`/`SPSR_EL2` transfer, GPR/sysreg save/restore, and persistent context base references.
    - Do not assume a context object is a vCPU unless cross-references and ownership evidence support it.
-   - If `ICH_*` system-register clusters such as `ICH_HCR_EL2` appear, record them as vCPU interrupt-interface hints and route them to S06 interrupt recovery. Do not merge them into Stage-2 or CPU ownership.
+   - If `ICH_*` system-register clusters such as `ICH_HCR_EL2` appear, record them as vCPU interrupt-interface hints and route them to S05 interrupt recovery. Do not merge them into Stage-2 or CPU ownership.
 
 5. Build ownership-safe candidates.
    - Emit candidate object IDs with evidence IDs, address ranges, base references, offsets, and confidence.
    - Mark ambiguous CPU/vCPU/VM ownership as Unknown, not as final type.
-   - A seed model may be useful with only CPU/per-CPU/context anchors, but S06 readiness requires integrated ownership, not just sysreg hit counts.
+   - A seed model may be useful with only CPU/per-CPU/context anchors, but S05 readiness requires integrated ownership, not just sysreg hit counts.
    - If only MPIDR/TPIDR/context-save anchors exist, set `model_status: review_required_runtime_anchor_clusters` or equivalent and emit blocking Unknowns for per-CPU/vCPU ownership.
 
 ## Outputs
 
 Produce:
 
-- `S05/cpu-vcpu-model.json`
-- `S05/records/recover-hypervisor-cpu-vcpu-model.evidence.jsonl`
-- `S05/records/recover-hypervisor-cpu-vcpu-model.decisions.jsonl`
-- `S05/records/recover-hypervisor-cpu-vcpu-model.unknowns.jsonl`
+- `S04/cpu-vcpu-model.json`
+- `S04/records/recover-hypervisor-cpu-vcpu-model.evidence.jsonl`
+- `S04/records/recover-hypervisor-cpu-vcpu-model.decisions.jsonl`
+- `S04/records/recover-hypervisor-cpu-vcpu-model.unknowns.jsonl`
 
 `cpu-vcpu-model.json` should include:
 

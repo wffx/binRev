@@ -1,6 +1,6 @@
 ---
 name: check-recovered-code-consistency
-description: "Check static consistency of recovered hypervisor code and models. Use in S09 to compare generated CFG/calls/constants/memory accesses with accepted binary evidence, validate source maps, and flag mismatches without repairing code."
+description: "Check static consistency of recovered hypervisor code and models. Use in S08 to compare generated CFG/calls/constants/memory accesses with accepted binary evidence, validate source maps, and flag mismatches without repairing code."
 ---
 
 # Check Recovered Code Consistency
@@ -54,13 +54,13 @@ Workflow v2 may instead require:
 
 Produce:
 
-- `S09/source-repo-audit.json`
-- `S09/readability-report.json`
-- `S09/readability-report.md`
-- `S09/semantic-rewrite-plan.json`
-- `S09/semantic-rewrite-plan.md`
-- `S09/consistency-report.json`
-- `S09/model-source-mismatches.jsonl`
+- `S08/source-repo-audit.json`
+- `S08/readability-report.json`
+- `S08/readability-report.md`
+- `S08/semantic-rewrite-plan.json`
+- `S08/semantic-rewrite-plan.md`
+- `S08/consistency-report.json`
+- `S08/model-source-mismatches.jsonl`
 
 ## Boundaries
 
@@ -73,6 +73,6 @@ Produce:
 - Do not conflate non-compiling Hex-Rays pseudocode review blocks, whether inline or externalized, with recovered executable C bodies.
 - Do not trust `semantic-c` labels alone; check whether the generated body is still a generic recovered wrapper.
 - Do not accept a source repository whose primary symbols are still dominated by generated helper/access names or IDA/address-style names.
-- Do not allow map/source drift: if the map says `semantic-c` but source comments or rewrite evidence still say `lifted-c`, or if evidence confidence is stale, fail S09 consistency.
+- Do not allow map/source drift: if the map says `semantic-c` but source comments or rewrite evidence still say `lifted-c`, or if evidence confidence is stale, fail S08 consistency.
 - Do not hide source-symbol repair wrappers inside the normal wrapper ratio. They must remain visible as a separate coverage-repair debt.
 - Do not allow duplicate recovered function definitions. Coverage is not valid unless each function-map symbol reads back to one canonical source definition.

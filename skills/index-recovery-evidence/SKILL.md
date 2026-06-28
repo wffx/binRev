@@ -1,6 +1,6 @@
 ---
 name: index-recovery-evidence
-description: "Index recovered repository evidence and unresolved objects. Use in S08 to produce recovery coverage indexes, confidence summaries, unresolved/stubbed lists, and source-to-binary traceability for downstream audit and delivery."
+description: "Index recovered repository evidence and unresolved objects. Use in S07 to produce recovery coverage indexes, confidence summaries, unresolved/stubbed lists, and source-to-binary traceability for downstream audit and delivery."
 ---
 
 # Index Recovery Evidence
@@ -15,9 +15,9 @@ In review-seed S08, compute coverage honestly: confirmed and inferred-C coverage
 
 Require:
 
-- `S08/source-map.json`
-- `S08/recovery-index.json`
-- `S08/unresolved-index.jsonl`
+- `S07/source-map.json`
+- `S07/recovery-index.json`
+- `S07/unresolved-index.jsonl`
 - S03-S07 stage indexes
 
 ## Workflow
@@ -32,10 +32,10 @@ Require:
 
 Produce:
 
-- `S08/coverage-summary.json`
-- `S08/recovery-evidence-index.json`
-- `S08/recovery-decision-index.json`
-- `S08/recovery-unknown-index.json`
+- `S07/coverage-summary.json`
+- `S07/recovery-evidence-index.json`
+- `S07/recovery-decision-index.json`
+- `S07/recovery-unknown-index.json`
 
 ## Boundaries
 

@@ -1,6 +1,6 @@
 ---
 name: generate-recovery-source-map
-description: "Generate source mapping for recovered hypervisor repository artifacts. Use in S08 to map each generated file, function, type, field, asm fallback, stub, and unresolved item back to Image addresses, IDA objects, evidence IDs, and decision IDs."
+description: "Generate source mapping for recovered hypervisor repository artifacts. Use in S07 to map each generated file, function, type, field, asm fallback, stub, and unresolved item back to Image addresses, IDA objects, evidence IDs, and decision IDs."
 ---
 
 # Generate Recovery Source Map
@@ -15,8 +15,8 @@ In review-seed S08, source-map generation must preserve the fact that repository
 
 Require:
 
-- `S08/recovered-repo/`
-- `S08/recovery-index.json`
+- `S07/recovered-repo/`
+- `S07/recovery-index.json`
 - S03-S07 evidence/decision/unknown indexes
 - accepted stage manifests
 
@@ -32,9 +32,9 @@ Require:
 
 Produce:
 
-- `S08/source-map.json`
-- `S08/address-to-source.json`
-- `S08/evidence-to-source.json`
+- `S07/source-map.json`
+- `S07/address-to-source.json`
+- `S07/evidence-to-source.json`
 
 ## Boundaries
 

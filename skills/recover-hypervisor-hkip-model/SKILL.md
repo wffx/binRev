@@ -1,6 +1,6 @@
 ---
 name: recover-hypervisor-hkip-model
-description: "Recover S07 HKIP or hypervisor-integrity-protection candidates from accepted runtime, memory, and service evidence. Use when the workflow needs protected regions, permission toggles, write windows, integrity metadata, verification paths, violation paths, and page/table protection evidence."
+description: "Recover S06 HKIP or hypervisor-integrity-protection candidates from accepted runtime, memory, and service evidence. Use when the workflow needs protected regions, permission toggles, write windows, integrity metadata, verification paths, violation paths, and page/table protection evidence."
 ---
 
 # Recover Hypervisor HKIP Model
@@ -15,24 +15,27 @@ If upstream evidence is review-seed-only, emit `absent_or_unknown` HKIP outputs 
 
 Require:
 
-- `S05/stage2-memory-model.json`
-- `S05/resource-ownership.jsonl`
-- `S06/service-model.json`
-- `S04/architecture-events.jsonl`
-- `S04/sysreg-accesses.jsonl`
+- `S04/stage2-memory-model.json`
+- `S04/resource-ownership.jsonl`
+- `S05/service-model.json`
+- `S05/ida-stage.i64`
+- `S03/architecture-events.jsonl`
+- `S03/sysreg-accesses.jsonl`
 - `S03/data-objects.jsonl`
 - accepted IDA checkpoint or IDA MCP session
 
 ## Workflow
 
 1. Enforce upstream gates.
-   - Require accepted S03-S06.
-   - If S05/S06 are review-seed-only, keep HKIP in review-seed mode and block production HKIP confirmation.
+   - Require accepted S03-S05.
+   - If S04/S05 are review-seed-only, keep HKIP in review-seed mode and block production HKIP confirmation.
    - If page ownership or permission evidence is unstable, emit `blocked_by_upstream`.
 
 2. Identify protection objects.
    - Track hypervisor text/rodata/page-table/metadata protection candidates.
    - Record permission-bit writes, temporary write windows, barriers/TLB invalidation, and violation paths.
+   - **String xref enumeration（字符串交叉引用全量枚举）**: 对本阶段相关的每个证据字符串（`XSM Framework`, `Flask: boundary violated`, `Flask: permission`, `Permission fault`, `xsm_set_system_active` 等），执行 `ida_xrefs_to_string` 获取所有 xref 地址，**必须遍历全部 xref**，找唯一包含函数并去重。赋予安全域前缀命名（`candidate_security_*`, `candidate_hkip_*`）。
+   - **Call graph propagation**: 对每个已命名的 HKIP 锚点函数，遍历直接 callees，赋予安全域命名。传播深度 1 层。
 
 3. Identify integrity mechanisms.
    - Track checksum/hash/table verification candidates only with dataflow evidence.
@@ -47,10 +50,10 @@ Require:
 
 Produce:
 
-- `S07/hkip-model.json`
-- `S07/records/recover-hypervisor-hkip-model.evidence.jsonl`
-- `S07/records/recover-hypervisor-hkip-model.decisions.jsonl`
-- `S07/records/recover-hypervisor-hkip-model.unknowns.jsonl`
+- `S06/hkip-model.json`
+- `S06/records/recover-hypervisor-hkip-model.evidence.jsonl`
+- `S06/records/recover-hypervisor-hkip-model.decisions.jsonl`
+- `S06/records/recover-hypervisor-hkip-model.unknowns.jsonl`
 
 ## Boundaries
 

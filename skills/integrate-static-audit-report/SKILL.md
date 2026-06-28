@@ -1,13 +1,13 @@
 ---
 name: integrate-static-audit-report
-description: "Integrate S09 consistency, security-invariant, and coverage findings into a static audit report. Use to produce review-ready findings, risks, accepted unknowns, and go/no-go recommendations without changing recovered code."
+description: "Integrate S08 consistency, security-invariant, and coverage findings into a static audit report. Use to produce review-ready findings, risks, accepted unknowns, and go/no-go recommendations without changing recovered code."
 ---
 
 # Integrate Static Audit Report
 
 ## Purpose
 
-Merge S09 audit workers into one review-ready static audit package.
+Merge S08 audit workers into one review-ready static audit package.
 
 If S08 is review-seed-only, integrate a review-seed audit package: consistency and coverage may pass, but security invariants must remain unknown/not-evaluable and production delivery must remain blocked.
 
@@ -15,9 +15,9 @@ If S08 is review-seed-only, integrate a review-seed audit package: consistency a
 
 Require:
 
-- `S09/consistency-report.json`
-- `S09/security-invariants.json`
-- `S09/recovery-coverage.json`
+- `S08/consistency-report.json`
+- `S08/security-invariants.json`
+- `S08/recovery-coverage.json`
 - S03-S08 unknown indexes
 
 ## Workflow
@@ -32,9 +32,9 @@ Require:
 
 Produce:
 
-- `S09/static-audit-report.md`
-- `S09/static-audit-report.json`
-- `S09/audit-findings.jsonl`
+- `S08/static-audit-report.md`
+- `S08/static-audit-report.json`
+- `S08/audit-findings.jsonl`
 
 ## Boundaries
 

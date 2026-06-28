@@ -1,6 +1,6 @@
 ---
 name: compute-recovery-coverage
-description: "Compute recovery coverage metrics for the hypervisor reverse-engineering workflow. Use in S09 to summarize function coverage, call graph coverage, type recovery, module attribution, C/asm/stub/unresolved ratios, and invariant evidence coverage."
+description: "Compute recovery coverage metrics for the hypervisor reverse-engineering workflow. Use in S08 to summarize function coverage, call graph coverage, type recovery, module attribution, C/asm/stub/unresolved ratios, and invariant evidence coverage."
 ---
 
 # Compute Recovery Coverage
@@ -17,8 +17,8 @@ Require:
 
 - S03-S08 indexes
 - `S08/coverage-summary.json`
-- `S09/consistency-report.json`
-- `S09/security-invariants.json`
+- `S08/consistency-report.json`
+- `S08/security-invariants.json`
 
 ## Workflow
 
@@ -32,8 +32,8 @@ Require:
 
 Produce:
 
-- `S09/recovery-coverage.json`
-- `S09/coverage-findings.jsonl`
+- `S08/recovery-coverage.json`
+- `S08/coverage-findings.jsonl`
 
 ## Boundaries
 

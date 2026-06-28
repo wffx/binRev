@@ -48,10 +48,15 @@ Require:
 
 Produce:
 
-- `S02/address-space.json`
-- `S02/records/resolve-arm64-load-address.evidence.jsonl`
-- `S02/records/resolve-arm64-load-address.decisions.jsonl`
-- `S02/records/resolve-arm64-load-address.unknowns.jsonl`
+- `S01/address-space.json`
+- `S01/records/resolve-arm64-load-address.evidence.jsonl`
+- `S01/records/resolve-arm64-load-address.decisions.jsonl`
+- `S01/records/resolve-arm64-load-address.unknowns.jsonl`
+
+## Reusable Scripts
+
+- `scripts/resolve_arm64_load_base.py` — IDAPython: scans ADRP pages, branch targets, exception vector candidates, produces load base candidates with scores.
+- `scripts/parse_arm64_pe_coff.py` — Standalone Python: reads PE/COFF header (ImageBase, EntryPoint, BaseOfCode) from an ARM64 Image binary. Run: `python scripts/parse_arm64_pe_coff.py <path-to-Image>`
 
 `address-space.json` should include:
 

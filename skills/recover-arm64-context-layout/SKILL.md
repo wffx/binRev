@@ -1,6 +1,6 @@
 ---
 name: recover-arm64-context-layout
-description: "Recover S04 offset-first ARM64 context layouts for trap frames, vCPU context, per-CPU state, and save/restore areas. Use when boot or exception evidence contains register save/restore, stack-frame, or context-switch access patterns."
+description: "Recover S03 offset-first ARM64 context layouts for trap frames, vCPU context, per-CPU state, and save/restore areas. Use when boot or exception evidence contains register save/restore, stack-frame, or context-switch access patterns."
 ---
 
 # Recover ARM64 Context Layout
@@ -13,14 +13,10 @@ Recover context layouts from save/restore evidence without importing source-leve
 
 Require:
 
-- `S03/stage-manifest.json`
-- `S03/functions.jsonl`
-- `S03/unresolved-regions.jsonl`
-- `S03/unresolved-regions*.jsonl` when rework iterations exist
-- `S04/boot-model.json`
-- `S04/exception-model.json`
-- `S04/sysreg-accesses.jsonl` or `S04/architecture-events.jsonl` when available
-- accepted IDA checkpoint or IDA MCP session
+- `S02/functions.jsonl` -- Primary source: frame_size, saved_regs, restored_regs fields recorded by S02's `recover-ida-functions`. Eliminates the need for this Skill to re-scan functions for STP/LDP patterns.
+- `S03/boot-model.json`
+- `S03/exception-model.json`
+- accepted IDA checkpoint or IDA MCP session (for targeted verification of specific context frames)
 
 ## Workflow
 
@@ -50,9 +46,9 @@ Require:
    - Mark role as candidate: `gpr_save`, `sysreg_save`, `return_state`, `percpu_ref`, `vcpu_ref`, or `unknown`.
    - Detect overlapping or inconsistent access width as rework/unknown.
 
-6. Feed S05 safely.
+6. Feed S04 safely.
    - Produce offset-first records consumable by CPU/vCPU and Stage-2 recovery.
-   - Do not assign final struct names or VM/vCPU ownership unless S05 confirms it.
+   - Do not assign final struct names or VM/vCPU ownership unless S04 confirms it.
    - If S03 or S04 is forward-test only, set downstream readiness to `blocked_by_s03_rework`.
    - If S03 is `review_required_after_rw5` with zero blocking unresolved blobs, mark output as `forward_test_review_required_after_s03_rw5` rather than `blocked_by_s03_rework`.
 
@@ -60,10 +56,10 @@ Require:
 
 Produce:
 
-- `S04/context-layouts.jsonl`
-- `S04/records/recover-arm64-context-layout.evidence.jsonl`
-- `S04/records/recover-arm64-context-layout.decisions.jsonl`
-- `S04/records/recover-arm64-context-layout.unknowns.jsonl`
+- `S03/context-layouts.jsonl`
+- `S03/records/recover-arm64-context-layout.evidence.jsonl`
+- `S03/records/recover-arm64-context-layout.decisions.jsonl`
+- `S03/records/recover-arm64-context-layout.unknowns.jsonl`
 
 Each context-layout record should include:
 
@@ -85,6 +81,6 @@ Each context-layout record should include:
 
 - Do not import external struct definitions.
 - Do not convert offset clusters into final C structs in S04.
-- Do not decide CPU/vCPU/VM ownership; that belongs to S05.
+- Do not decide CPU/vCPU/VM ownership; that belongs to S04.
 - Do not apply IDA writes directly.
 - Do not hide asymmetric or partially recovered save/restore paths.

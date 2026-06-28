@@ -45,9 +45,18 @@ Require:
 Produce:
 
 - `S00/constraint-profile.json`
+- `S00/tool-status.json`
 - `S00/records/enforce-recovery-constraints.evidence.jsonl`
 - `S00/records/enforce-recovery-constraints.decisions.jsonl`
 - `S00/records/enforce-recovery-constraints.unknowns.jsonl`
+
+`tool-status.json` should be produced by probing the local IDA/IDA MCP toolchain and include:
+
+- IDA version and install path
+- IDA MCP version, path, probe test result (open_idb, list_functions, disasm, decompile availability)
+- Hex-Rays decompiler availability
+- IDAPython availability
+- Overall readiness assessment for S02
 
 `constraint-profile.json` should include:
 

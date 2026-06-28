@@ -1,6 +1,6 @@
 ---
 name: synthesize-hypervisor-repository
-description: "Synthesize the recovered hypervisor source repository from accepted workflow evidence. Use in S08 to emit freestanding AArch64 source only for codegen-ready or explicitly asm-fallback functions, preserve evidence maps, and avoid fake internal module stubs or invented unresolved logic."
+description: "Synthesize the recovered hypervisor source repository from accepted workflow evidence. Use in S07 to emit freestanding AArch64 source only for codegen-ready or explicitly asm-fallback functions, preserve evidence maps, and avoid fake internal module stubs or invented unresolved logic."
 ---
 
 # Synthesize Hypervisor Repository
@@ -53,10 +53,10 @@ Review-seed mode requires:
 
 Produce:
 
-- `S08/recovered-repo/`
-- `S08/recovery-index.json`
-- `S08/build-manifest.json`
-- `S08/unresolved-index.jsonl`
+- `S07/recovered-repo/`
+- `S07/recovery-index.json`
+- `S07/build-manifest.json`
+- `S07/unresolved-index.jsonl`
 
 ## Boundaries
 
@@ -65,23 +65,23 @@ Produce:
 - Do not write IDA.
 - Do not convert `model_hypothesis` lifecycle, scheduler, interrupt, Stage-2, or HKIP records into source implementations.
 
-## Workflow v2 override: S08 function-level source lifting
+## S08 function-level source lifting
 
-When the workflow uses `workflow-source-recovery-v2.md`, this Skill generates source only from `S07/codegen-ready-functions.jsonl` and IDA decompile/disassembly exports.
+This Skill generates source only from `S07/codegen-ready-functions.jsonl` and IDA decompile/disassembly exports.
 
-Treat the v2 contract as authoritative over the legacy repository-skeleton workflow above. In v2, do not create a broad module tree just because the domain has CPU, VM, HKIP, scheduler, interrupt, or Stage-2 concepts. Create source files only when at least one function in that file is `codegen-ready` or `asm-fallback`.
+Do not create a broad module tree just because the domain has CPU, VM, HKIP, scheduler, interrupt, or Stage-2 concepts. Create source files only when at least one function in that file is `codegen-ready` or `asm-fallback`.
 
-Require exact function-boundary evidence before lifting Hex-Rays output. If IDA only provides a containing function whose start differs from the candidate root, record the candidate in `S08/unresolved-index.jsonl` and do not emit source for that address.
+Require exact function-boundary evidence before lifting Hex-Rays output. If IDA only provides a containing function whose start differs from the candidate root, record the candidate in `S07/unresolved-index.jsonl` and do not emit source for that address.
 
 Primary outputs:
 
 - `recovered-repos/<case-id>/recovered-hypervisor/` as the canonical user-facing source repository
-- `S08/recovered-hypervisor/` as a staged copy inside the evidence workspace
-- `S08/function-map.json`
-- `S08/source-map.json`
-- `S08/source-quality-report.json`
-- `S08/unresolved-index.jsonl`
-- `S08/source-repo-delivery.json`
+- `S07/recovered-hypervisor/` as a staged copy inside the evidence workspace
+- `S07/function-map.json`
+- `S07/source-map.json`
+- `S07/source-quality-report.json`
+- `S07/unresolved-index.jsonl`
+- `S07/source-repo-delivery.json`
 
 The canonical source repository must be source-first: include `.c` and `.h` files and only source/build-facing support files such as `README.md`, `Makefile`, linker scripts, or assembly fallback files. Keep JSON/JSONL/SQLite/IDA artifacts in `cases/<case-id>/stages`; do not describe the case evidence directory as the source repository.
 
@@ -131,11 +131,11 @@ For generic helpers whose S07 pseudocode is mechanically simple, run `scripts/ap
 
 Do not rename from one generic family to another generic family merely because a broad architecture anchor appears. In particular, `TPIDR_EL2` alone is not enough to rename a function to `percpu_access_current_cpu_state_N` or `runtime_access_current_cpu_state_N`; require additional string, callgraph, module, or data-layout evidence. If a naming pass only renumbers generic symbols, roll it back and record a rollback summary.
 
-After S06 global-object candidates exist, run `scripts/apply_global_aliases.py --case-id <case-id>` to replace high-frequency `qword_*`, `dword_*`, and `byte_*` names in user-facing `.c` source with stable presentation aliases such as `timer_global_state_001`. This pass must not promote `output_class`; original IDA names must remain in `S06/global-object-model.json`, `S08/global-alias-index.jsonl`, and `include/recovered/recovered_objects.h` comments.
+After S06 global-object candidates exist, run `scripts/apply_global_aliases.py --case-id <case-id>` to replace high-frequency `qword_*`, `dword_*`, and `byte_*` names in user-facing `.c` source with stable presentation aliases such as `timer_global_state_001`. This pass must not promote `output_class`; original IDA names must remain in `S06/global-object-model.json`, `S07/global-alias-index.jsonl`, and `include/recovered/recovered_objects.h` comments.
 
 After S06 offset-family candidates exist, run `scripts/annotate_offset_field_accesses.py --case-id <case-id> --max-annotations <n>` to add presentation-only comments beside real base+offset dereferences, such as `candidate_runtime_a1_object.field_0x18`. This pass must be idempotent, must first remove its old annotations, must not annotate inside string literals or historical pseudocode comments, and must not promote `output_class` or claim confirmed structure ownership.
 
-When lifted-only inline `#if 0` pseudocode makes the source repository unreadable, run `scripts/extract_lifted_pseudocode_views.py --case-id <case-id> --max-functions <n>` to move those review blocks into `S08/lifted-pseudocode-review.jsonl`. This keeps source files source-like while preserving decompiler evidence. The function remains `lifted-c`; do not count externalized pseudocode as semantic source.
+When lifted-only inline `#if 0` pseudocode makes the source repository unreadable, run `scripts/extract_lifted_pseudocode_views.py --case-id <case-id> --max-functions <n>` to move those review blocks into `S07/lifted-pseudocode-review.jsonl`. This keeps source files source-like while preserving decompiler evidence. The function remains `lifted-c`; do not count externalized pseudocode as semantic source.
 
 For user-facing readability, run `scripts/clean_semantic_source_view.py --case-id <case-id>` after semantic names are applied. With this semantic-clean script, remove inline Hex-Rays pseudocode only for functions that already have semantic body/name evidence. Lifted-only functions must use `extract_lifted_pseudocode_views.py` if their review blocks are externalized.
 

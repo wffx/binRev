@@ -1,34 +1,34 @@
 ---
 name: integrate-hypervisor-runtime-model
-description: "Integrate S05 CPU/vCPU and Stage-2 memory outputs into a unified hypervisor runtime object model. Use to reconcile CPU, vCPU, VM, context, VMID, page ownership, type candidates, blocking conflicts, and reviewed IDA proposals without applying them."
+description: "Integrate S04 CPU/vCPU and Stage-2 memory outputs into a unified hypervisor runtime object model. Use to reconcile CPU, vCPU, VM, context, VMID, page ownership, type candidates, blocking conflicts, and reviewed IDA proposals without applying them."
 ---
 
 # Integrate Hypervisor Runtime Model
 
 ## Purpose
 
-Merge S05 runtime workers into one ownership-safe runtime model for S06 service recovery. This Skill may directly read IDA through IDA MCP for verification without asking for a separate connection confirmation. It must not mutate IDA.
+Merge S04 runtime workers into one ownership-safe runtime model for S05 service recovery. This Skill may directly read IDA through IDA MCP for verification without asking for a separate connection confirmation. It must not mutate IDA.
 
 ## Inputs
 
 Require:
 
+- `S02/stage-manifest.json`
 - `S03/stage-manifest.json`
-- `S04/stage-manifest.json`
-- `S04/architecture-model.json`
-- `S05/cpu-vcpu-model.json`
-- `S05/stage2-memory-model.json`
-- `S05/records/recover-hypervisor-cpu-vcpu-model.*.jsonl`
-- `S05/records/recover-hypervisor-stage2-memory-model.*.jsonl`
+- `S03/architecture-model.json`
+- `S04/cpu-vcpu-model.json`
+- `S04/stage2-memory-model.json`
+- `S04/records/recover-hypervisor-cpu-vcpu-model.*.jsonl`
+- `S04/records/recover-hypervisor-stage2-memory-model.*.jsonl`
 - accepted IDA checkpoint or IDA MCP session
 
 ## Workflow
 
 1. Verify upstream readiness.
-   - Require accepted S03 and S04.
-   - If S03 or S04 is accepted with residual `accepted-risk`, preserve the accepted-risk artifact in S05 provenance. Do not block S05 solely for waived upstream residuals, but downgrade any runtime ownership conclusion that directly depends on a waived address to `review_only`, `inferred`, or `unresolved`.
+   - Require accepted S02 and S03.
+   - If S02 or S03 is accepted with residual `accepted-risk`, preserve the accepted-risk artifact in S04 provenance. Do not block S04 solely for waived upstream residuals, but downgrade any runtime ownership conclusion that directly depends on a waived address to `review_only`, `inferred`, or `unresolved`.
    - Require CPU/vCPU and Stage-2 worker outputs to be internally valid.
-   - If any upstream gate is blocked, emit `S05/runtime-object-model.json` only with `status: blocked_by_upstream`; do not mark S06 readiness.
+   - If any upstream gate is blocked, emit `S04/runtime-object-model.json` only with `status: blocked_by_upstream`; do not mark S05 readiness.
 
 2. Connect to IDA read-only when cross-checking current state.
 
@@ -38,7 +38,7 @@ Require:
    - Detect impossible ownership, such as one VMID bound to conflicting roots without migration evidence.
    - Treat seed-only models as `forward_test_review_required` until CPU/vCPU/context references and Stage-2 ownership are connected by dataflow or call graph evidence.
    - Treat function-level runtime clusters as stronger than raw sysreg hit lists, but still not final ownership. Clusters may support `review_only_links`; they do not become `ownership_links` until concrete dataflow or call graph ownership is recovered.
-   - Keep `ICH_*` interrupt-interface clusters separate from Stage-2 root/VMID clusters. They may seed S06 interrupt/vCPU recovery but must not satisfy S05 Stage-2 ownership.
+   - Keep `ICH_*` interrupt-interface clusters separate from Stage-2 root/VMID clusters. They may seed S05 interrupt/vCPU recovery but must not satisfy S04 Stage-2 ownership.
 
 4. Build type and ownership candidates.
    - Emit offset-first type candidates, not final source structs.
@@ -53,7 +53,7 @@ Require:
    - Use `review_required_owner_root_match` when owner/root matching has been attempted but produces only weak matches, such as same offset or same lifecycle field family without a shared root signature.
    - Use `review_required_caller_argument_propagation` when caller argument roots match but remain service-local, global/constant-rooted, stack-rooted, or otherwise not tied to VM/Stage-2 lifecycle ownership.
    - Use `review_required_root_classification` when caller-root classification has no object-like roots or only ambiguous roots.
-   - For repeatable root classification, use `scripts/classify_caller_root_matches.py` on the caller-argument propagation artifact before deciding S06 readiness.
+   - For repeatable root classification, use `scripts/classify_caller_root_matches.py` on the caller-argument propagation artifact before deciding S05 readiness.
    - If root classification produces no object-like roots, run `scripts/plan_owner_root_continuation.py` to split review-only matches into helper self-loop, global-state, per-CPU-state, stack-parent-trace, and ambiguous-backtrace queues. Use `review_required_root_continuation_plan` for that state.
    - After continuation planning, run `scripts/expand_owner_root_anchors.py` with RW2/RW3/RW6/RW9 artifacts to expand per-CPU, global, and stack anchors against existing dataflow/owner-root evidence. Use `review_required_anchor_expansion` when the expansion identifies trace families but still lacks owner lifetime/resource identity closure.
    - If IDA read-only access is available, run `scripts/ida_s05_rw11_anchor_xref_trace.py` to trace dominant global xrefs/writes and TPIDR offset-family read/write uses. Treat its output as evidence only; do not promote ownership until lifecycle/resource identity is proven.
@@ -63,19 +63,19 @@ Require:
    - After RW14, run `scripts/ida_s05_rw15_tpidr_writer_lifecycle_trace.py` to scan full-IDB same-offset writers/clearers and separate them from function-local TPIDR-confirmed field writes. Treat same-offset hits as broad candidates only. Treat TPIDR-confirmed writer/clearer functions as lifecycle candidates, not ownership links, until the same owner is connected across init/start/stop/destroy and VM/vCPU/Stage-2 resource identity. Use `review_required_tpidr_writer_lifecycle_trace`.
    - After RW15, run `scripts/ida_s05_rw16_lifecycle_bridge_trace.py` to bridge writer/clearer seed functions through callers, callees, nearby call windows, strings, sysregs, and RW4 lifecycle summaries. Count clear evidence only for store-zero or explicit zero-value definitions; do not treat arbitrary `XZR/WZR` use in arithmetic as a lifecycle clear. Use `review_required_lifecycle_bridge_trace` until a bridge proves same-owner resource identity.
    - After RW16, run `scripts/ida_s05_rw17_cross_function_arg_bridge.py` to compare argument roots across shared caller/callee bridge pairs. Preserve symbols/text for address-materializing `ADD/ADRP/ADRL` roots; never collapse unrelated static addresses or logging strings into the same generic compute root. Treat shared static/per-CPU roots as review-only context, not ownership. Use `review_required_cross_function_arg_bridge`.
-   - After RW17, run `scripts/finalize_s05_convergence_gate.py` to summarize RW8-RW17 and decide whether S05 has production ownership links. If ownership links remain empty and the best bridges are static/per-CPU context rather than VM/vCPU/Stage-2 resource identity, set `not_accepted_review_required_converged_no_object_owner_root` and keep S06 blocked for production. Do not continue blind S05 expansion or fabricate ownership links.
+   - After RW17, run `scripts/finalize_s05_convergence_gate.py` to summarize RW8-RW17 and decide whether S04 has production ownership links. If ownership links remain empty and the best bridges are static/per-CPU context rather than VM/vCPU/Stage-2 resource identity, set `not_accepted_review_required_converged_no_object_owner_root` and keep S05 blocked for production. Do not continue blind S04 expansion or fabricate ownership links.
    - Keep VTTBR field seeds and TPIDR indexed-variable seeds as `review_only_links`; do not upgrade them to `ownership_links` without a proven owner object and lifecycle path.
    - Keep shared caller clusters and TPIDR base-root classes as review-only until they are connected to a unique owner and resource lifetime.
    - Keep lifecycle edges as review-only if they only prove ordering, field writes, or state clears. Upgrade to ownership only when the same object is linked across allocation/init/start/stop/destroy or equivalent lifetime boundaries.
    - Treat teardown scans as negative/partial evidence when they find cleanup patterns without proving symmetry. Do not let high teardown scores override missing owner identity.
-   - Treat exact owner/root closure as necessary but not always sufficient: still require VMID/resource identity or caller lifetime context before marking S06-ready ownership.
+   - Treat exact owner/root closure as necessary but not always sufficient: still require VMID/resource identity or caller lifetime context before marking S05-ready ownership.
    - Do not promote same-helper or same-caller matches to `ownership_links` unless the common argument root is object-like and survives lifecycle-boundary checks.
-   - Treat `object_like_count == 0` as a hard S06 production block. Service-local, global/constant, stack-local, and ambiguous roots may feed review queues only.
-   - Set `s06_readiness.status` to a blocked state whenever ownership links are empty or only review-only.
+   - Treat `object_like_count == 0` as a hard S05 production block. Service-local, global/constant, stack-local, and ambiguous roots may feed review queues only.
+   - Set `s05_readiness.status` to a blocked state whenever ownership links are empty or only review-only.
 
 5. Generate IDA proposal.
    - Propose only architecture/runtime-level comments or candidate names.
-   - Do not propose VM config, scheduler, interrupt route, lifecycle, or HKIP names in S05.
+   - Do not propose VM config, scheduler, interrupt route, lifecycle, or HKIP names in S04.
    - Mark all high-risk names and type comments as review-only.
    - Do not use forward-test oracle databases, symbols, or source matches as production evidence. If an oracle is available during local skill development, keep it under validation artifacts and summarize only transferable heuristics in this Skill.
 
@@ -83,13 +83,13 @@ Require:
 
 Produce:
 
-- `S05/runtime-object-model.json`
-- `S05/types.jsonl`
-- `S05/resource-ownership.jsonl`
-- `S05/ida-change-proposal.json`
-- `S05/records/integrate-hypervisor-runtime-model.evidence.jsonl`
-- `S05/records/integrate-hypervisor-runtime-model.decisions.jsonl`
-- `S05/records/integrate-hypervisor-runtime-model.unknowns.jsonl`
+- `S04/runtime-object-model.json`
+- `S04/types.jsonl`
+- `S04/resource-ownership.jsonl`
+- `S04/ida-change-proposal.json`
+- `S04/records/integrate-hypervisor-runtime-model.evidence.jsonl`
+- `S04/records/integrate-hypervisor-runtime-model.decisions.jsonl`
+- `S04/records/integrate-hypervisor-runtime-model.unknowns.jsonl`
 
 `runtime-object-model.json` should include:
 
@@ -101,7 +101,7 @@ Produce:
 - `stage2_refs`
 - `ownership_links`
 - `blocking_unknowns`
-- `s06_readiness`
+- `s05_readiness`
 - `upstream_gate`
 
 ## Boundaries
@@ -111,38 +111,38 @@ Produce:
 - Do not apply IDA writes directly.
 - Do not use external symbols, source code, logs, DTB, traces, or non-IDA reverse tools.
 
-## Workflow v2 override: S05 function clustering
+## S04 function clustering
 
-When the workflow uses `workflow-source-recovery-v2.md`, this Skill acts as S05 function clustering and module attribution.
+This Skill performs function clustering and module attribution.
 
 Produce these primary artifacts:
 
-- `S05/function-clusters.json`
-- `S05/module-attribution.json`
-- `S05/cluster-readiness.json`
+- `S04/function-clusters.json`
+- `S04/module-attribution.json`
+- `S04/cluster-readiness.json`
 
 Cluster functions by:
 
-- S03 boundaries and call graph;
-- S04 architecture events;
+- S02 boundaries and call graph;
+- S03 architecture events;
 - sysreg/MMIO access families;
 - TPIDR_EL2/VTTBR_EL2/VTCR_EL2/TLBI/ICH/CNT/GIC anchors;
 - xrefs, globals, strings, and data-object neighborhoods.
 
-Do not require final VM/vCPU/Stage-2 ownership before S06. S05 v2 readiness means a cluster is ready for type/object/argument propagation, not that the business object model is proven.
+Do not require final VM/vCPU/Stage-2 ownership before S05. S04 v2 readiness means a cluster is ready for type/object/argument propagation, not that the business object model is proven.
 
-In corpus-wide mode, S05 must cluster every S03 function and produce `S05/directory-plan.json`. Low-confidence functions must be routed to `recovered/unknown/cluster_xx` rather than omitted. Report total function count, clustered function count, and unknown-cluster count.
+In corpus-wide mode, S04 must cluster every S02 function and produce `S04/directory-plan.json`. Low-confidence functions must be routed to `recovered/unknown/cluster_xx` rather than omitted. Report total function count, clustered function count, and unknown-cluster count.
 
-## Workflow v2 override: S06 offset/global type seeds
+## S05 offset/global type seeds
 
-When the workflow uses `workflow-source-recovery-v2.md`, run `scripts/recover_offset_global_families.py --case-id <case-id> --emit-header` after S07/S08 corpus exports exist.
+Run `scripts/recover_offset_global_families.py --case-id <case-id> --emit-header` after S07/S08 corpus exports exist.
 
-This S06 pass must:
+This S05 pass must:
 
 - mine Hex-Rays pseudocode for repeated argument-base offsets such as `a1 + 0x18`;
 - record access width, hit count, function count, source file, module, and examples;
 - mine high-frequency `qword_*`, `dword_*`, `byte_*` globals and classify them as review-only global state candidates;
-- emit `S06/struct-layouts.jsonl`, `S06/global-object-model.json`, `S06/argument-flow.jsonl`, `S06/type-candidates.json`, and `S06/offset-global-recovery-summary.json`;
+- emit `S05/struct-layouts.jsonl`, `S05/global-object-model.json`, `S05/argument-flow.jsonl`, `S05/type-candidates.json`, and `S05/offset-global-recovery-summary.json`;
 - optionally emit `include/recovered/recovered_objects.h` into the canonical source repo as a review-seed header.
 
 Do not treat candidate structs as confirmed source layouts. If offsets overlap or ownership is unknown, generated headers must preserve field offsets in comments and use raw storage rather than pretending the exact C struct is known. Do not apply IDA type writes from this pass without a reviewed S07 transaction.

@@ -85,9 +85,9 @@ Review-seed exit requires:
 - Do not omit unknowns, stubs, or unresolved indexes.
 - Do not present review-seed delivery as production source recovery.
 
-## Workflow v2 source delivery
+## Source delivery package layout
 
-When using `workflow-source-recovery-v2.md`, S10 must package source and evidence separately:
+S10 must package source and evidence separately:
 
 ```text
 S10/deliverable/

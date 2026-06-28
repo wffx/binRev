@@ -1,6 +1,6 @@
 ---
 name: generate-final-recovery-report
-description: "Generate the final hypervisor recovery report from S00-S09 artifacts. Use in S10 to summarize inputs, constraints, recovered architecture, repository layout, evidence coverage, unresolved risks, and audit results."
+description: "Generate the final hypervisor recovery report from S00-S08 artifacts. Use in S09 to summarize inputs, constraints, recovered architecture, repository layout, evidence coverage, unresolved risks, and audit results."
 ---
 
 # Generate Final Recovery Report
@@ -40,8 +40,8 @@ Workflow v2 may instead require:
 
 Produce:
 
-- `S10/final-recovery-report.md`
-- `S10/final-recovery-report.json`
+- `S09/final-recovery-report.md`
+- `S09/final-recovery-report.json`
 
 ## Boundaries
 

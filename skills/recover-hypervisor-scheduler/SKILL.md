@@ -1,6 +1,6 @@
 ---
 name: recover-hypervisor-scheduler
-description: "Recover S06 hypervisor scheduler candidates from accepted S05 runtime ownership evidence. Use when the workflow needs runqueue, runnable/block state, vCPU selection, affinity, timer wakeup, preemption, and world-switch scheduling paths without naming policy beyond evidence."
+description: "Recover S05 hypervisor scheduler candidates from accepted S04 runtime ownership evidence. Use when the workflow needs runqueue, runnable/block state, vCPU selection, affinity, timer wakeup, preemption, and world-switch scheduling paths without naming policy beyond evidence."
 ---
 
 # Recover Hypervisor Scheduler
@@ -13,41 +13,43 @@ Recover static scheduler structure and vCPU selection evidence. This Skill may d
 
 Require:
 
-- `S05/runtime-object-model.json`
-- `S05/types.jsonl`
-- `S05/resource-ownership.jsonl`
-- `S04/context-layouts.jsonl`
-- `S04/architecture-events.jsonl`
-- `S03/call-graph.json`
+- `S04/runtime-object-model.json`
+- `S04/types.jsonl`
+- `S04/resource-ownership.jsonl`
+- `S03/context-layouts.jsonl`
+- `S03/architecture-events.jsonl`
+- `S02/call-graph.json`
+- `S04/ida-stage.i64`
 - accepted IDA checkpoint or IDA MCP session
 
 ## Workflow
 
 1. Enforce upstream gates.
-   - Require accepted S03-S05.
+   - Require accepted S02-S04.
    - If runtime ownership is not accepted, emit `blocked_by_upstream`.
 
 2. Find scheduling anchors.
    - Track runqueue-like lists, current/next vCPU references, affinity masks, timer/IRQ wakeups, locks, and world-switch calls.
-   - Record state writes and comparisons before naming states.
+   - **String xref enumeration**: 对每个调度器证据字符串（`csched2_global_init`, `do_schedule`, `switch_sched`, `csched2_res_pick`, `cpu_add_to_runqueue`, `credit2_runqueue`, `Initializing Credit2 scheduler` 等）执行 `ida_xrefs_to_string`，**必须遍历全部 xref**，找所有唯一包含函数。赋予 `candidate_sched_*` / `candidate_scheduler_*` 命名。
+   - **Call graph propagation**: 对每个已命名的调度器锚点，遍历直接 callees。传播深度 1 层。
 
 3. Recover state transitions.
    - Emit candidate `state_0xN` values when names are unknown.
    - Distinguish runnable/block/preempt/wakeup candidates only with control-flow and data-write evidence.
 
 4. Link to runtime objects.
-   - Bind scheduler actions to vCPU/CPU/context candidates from S05.
+   - Bind scheduler actions to vCPU/CPU/context candidates from S04.
    - Preserve ambiguous ownership as Unknown.
 
 ## Outputs
 
 Produce:
 
-- `S06/scheduler-model.json`
-- `S06/state-machines.jsonl`
-- `S06/records/recover-hypervisor-scheduler.evidence.jsonl`
-- `S06/records/recover-hypervisor-scheduler.decisions.jsonl`
-- `S06/records/recover-hypervisor-scheduler.unknowns.jsonl`
+- `S05/scheduler-model.json`
+- `S05/state-machines.jsonl`
+- `S05/records/recover-hypervisor-scheduler.evidence.jsonl`
+- `S05/records/recover-hypervisor-scheduler.decisions.jsonl`
+- `S05/records/recover-hypervisor-scheduler.unknowns.jsonl`
 
 ## Boundaries
 

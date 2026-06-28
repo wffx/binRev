@@ -99,9 +99,9 @@ Review-seed exit requires:
 - Do not convert unknowns into passes.
 - Do not present review-seed audits as production acceptance.
 
-## Workflow v2 source-repository audit
+## Source repository audit
 
-When using `workflow-source-recovery-v2.md`, S09 must distinguish the canonical source repository from the evidence workspace:
+S09 must distinguish the canonical source repository from the evidence workspace:
 
 ```text
 canonical source repository:
